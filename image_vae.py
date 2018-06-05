@@ -54,7 +54,8 @@ class ImageVAE():
         
         z_mean, z_log_var = sample_args
         
-        epsilon = K.random_normal(shape=(K.shape(z_mean)[0], self.latent_dim),
+        epsilon = K.random_normal(shape=(K.shape(z_mean)[0],
+                                         self.latent_dim),
                                   mean=0,
                                   stddev=self.epsilon_std)
     
@@ -103,14 +104,19 @@ class ImageVAE():
         
         #   decoder architecture
 
-        output_dim = (self.batch_size, self.image_size//2, self.image_size//2, self.nfilters)
+        output_dim = (self.batch_size, 
+                      self.image_size//2,
+                      self.image_size//2,
+                      self.nfilters)
         
         #   instantiate rather than pass through for later resuse
         
         decoder_hid = Dense(self.inter_dim, 
                             activation='relu')
         
-        decoder_upsample = Dense(self.nfilters * self.image_size//2 * self.image_size//2, 
+        decoder_upsample = Dense(self.nfilters * 
+                                 self.image_size//2 * 
+                                 self.image_size//2, 
                                  activation='relu')
 
         decoder_reshape = Reshape(output_dim[1:])
@@ -163,7 +169,6 @@ class ImageVAE():
         self.encoder = Model(x, z_mean)
         self.decoder = Model(decoder_input, _x_decoded_mean_squash)
         
-        
         #   VAE loss terms w/ KL divergence
             
         def vae_loss(x, x_decoded_mean_squash):
@@ -202,7 +207,7 @@ class ImageVAE():
         
         term_nan = TerminateOnNaN()
         csv_logger = CSVLogger(os.path.join(self.save_dir, 'training.log'), separator='\t')
-        checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 'checkpoints/vae_weights.{epoch:02d}.hdf5'), 
+        checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 'checkpoints/vae_weights.hdf5'), 
                                        verbose=1, 
                                        save_weights_only=True)        
         
@@ -212,11 +217,9 @@ class ImageVAE():
                                callbacks = [term_nan,
                                             csv_logger,
                                             checkpointer],
-                               #steps_per_epoch = self.data_size // self.batch_size)
-                               steps_per_epoch = 2)  # for testing
-                               
+                               steps_per_epoch = self.data_size // self.batch_size)                               
 
-        self.vae.save_weights(os.path.join(self.save_dir, 'checkpoints/vae_weights.final.hdf5'))
+        self.vae.save_weights(os.path.join(self.save_dir, 'checkpoints/vae_weights.hdf5'))
                
         self.encode()        
         self.latent_walk()
