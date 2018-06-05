@@ -26,8 +26,11 @@ class ImageVAE():
 
         self.data_dir       = args.data_dir
         self.save_dir       = args.save_dir
+        
         self.image_size     = args.image_size
         self.image_channel  = args.image_channel
+        self.image_res      = args.image_res
+        
         self.latent_dim     = args.latent_dim
         self.inter_dim      = args.inter_dim
         self.num_conv       = args.num_conv
@@ -182,8 +185,8 @@ class ImageVAE():
     def train(self):
         """ train VAE model
         """
-
-        train_datagen = ImageDataGenerator(rescale = 1./255,
+        
+        train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
                                            horizontal_flip = True,
                                            vertical_flip = True)
                         
@@ -227,12 +230,12 @@ class ImageVAE():
         input_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
         recon_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
         
-        to_load = glob.glob(os.path.join(self.data_dir, 'train', '*.png'))[:(self.num_save * self.num_save)]
+        to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-        scaled_input = input_images / float(255)
+        scaled_input = input_images / float((2**self.image_res - 1))
         recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
-        scaled_recon = recon_images * float(255)
+        scaled_recon = recon_images * float((2**self.image_res - 1))
         
         idx = 0
         for i in range(self.num_save):
@@ -262,7 +265,7 @@ class ImageVAE():
         
                 z_sample = np.tile(z_sample, self.batch_size).reshape(self.batch_size, self.latent_dim)
                 x_decoded = self.decoder.predict(z_sample, batch_size=self.batch_size)
-                x_decoded = x_decoded * float(255)
+                x_decoded = x_decoded * float((2**self.image_res - 1))
                 
                 sample = x_decoded[0].reshape(self.image_size, self.image_size, self.image_channel)
                 
@@ -276,7 +279,7 @@ class ImageVAE():
         """ encode data with trained model
         """
         
-        test_datagen = ImageDataGenerator(rescale = 1./255)
+        test_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1))
         
         test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
