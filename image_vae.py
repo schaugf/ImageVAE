@@ -179,7 +179,7 @@ class ImageVAE():
             return vae_loss
         
         
-        rms = optimizers.adagrad(lr = self.learn_rate)
+        rms = optimizers.adam(lr = self.learn_rate)
         
         self.vae.compile(optimizer = rms,
                          loss = vae_loss)
