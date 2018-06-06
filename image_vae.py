@@ -17,9 +17,13 @@ from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
 
 
 class ImgSave(Callback):
+    """ this callback saves sample input images, their reconstructions, and a 
+    latent space walk at the end of each epoch
+    """
     
     def __init__(self, latent_dim, latent_samp, batch_size, image_size, num_save, 
                  image_channel, image_res, data_dir, save_dir, vae, decoder):
+        
         self.latent_dim     = latent_dim
         self.latent_samp    = latent_samp
         self.batch_size     = batch_size
@@ -32,9 +36,11 @@ class ImgSave(Callback):
         self.vae            = vae
         self.decoder        = decoder 
         
-    def save_input_reconstruction(self):
+        
+    def save_input_reconstruction(self, epoch):
         """ save grid of both input and reconstructed images side by side
         """
+        
         input_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
         recon_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
         
@@ -54,13 +60,14 @@ class ImgSave(Callback):
                              j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,:]
                 idx += 1
         
-        imageio.imwrite(os.path.join(self.save_dir, 'input_images.png'), input_figure)
-        imageio.imwrite(os.path.join(self.save_dir, 'recon_images.png'), recon_figure)
+        imageio.imwrite(os.path.join(self.save_dir, 'input', 'input_images_epoch_{0:03d}.png'.format(epoch)), input_figure)
+        imageio.imwrite(os.path.join(self.save_dir, 'reconstructed', 'recon_images_epoch_{0:03d}.png'.format(epoch)), recon_figure)
     
     
-    def latent_walk(self):
+    def latent_walk(self, epoch):
         """ latent space walking
         """
+        
         figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.image_channel))
         grid_x = norm.ppf(np.linspace(0.05, 0.95, self.latent_samp))
         
@@ -78,16 +85,13 @@ class ImgSave(Callback):
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample
         
-        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk.png'), figure)
-        
-        
-    def on_batch_end(self, batch, logs={}):
-        self.save_input_reconstruction()
+        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), figure)
         
         
     def on_epoch_end(self, epoch, logs={}):
-        self.latent_walk()
-        
+        self.save_input_reconstruction(epoch)
+        self.latent_walk(epoch)        
+
         
 
 class ImageVAE():
@@ -118,6 +122,11 @@ class ImageVAE():
         self.verbose        = args.verbose
         
         self.phase          = args.phase
+        
+        self.steps_per_epoch = args.steps_per_epoch
+        
+        if self.steps_per_epoch == 0:
+            self.steps_per_epoch = self.data_size // self.batch_size
                 
         self.build_model()
 
@@ -170,10 +179,10 @@ class ImageVAE():
         
         #   reparameterization trick
         
-        z_mean = Dense(self.latent_dim)(hidden)        
-        z_log_var = Dense(self.latent_dim)(hidden)
+        z_mean      = Dense(self.latent_dim)(hidden)        
+        z_log_var   = Dense(self.latent_dim)(hidden)
         
-        z = Lambda(self.sampling)([z_mean, z_log_var])
+        z           = Lambda(self.sampling)([z_mean, z_log_var])
         
         
         #   decoder architecture
@@ -297,7 +306,7 @@ class ImageVAE():
                             self.save_dir, 
                             self.vae,
                             self.decoder)
-
+        
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
@@ -305,13 +314,10 @@ class ImageVAE():
                                             csv_logger,
                                             checkpointer,
                                             img_saver],
-                               steps_per_epoch = self.data_size // self.batch_size)                               
+                               steps_per_epoch = self.steps_per_epoch)                               
 
         self.vae.save_weights(os.path.join(self.save_dir, 'checkpoints/vae_weights.hdf5'))
-               
         self.encode()        
-        self.latent_walk()
-        self.save_input_reconstruction()
         
     
     def encode(self):

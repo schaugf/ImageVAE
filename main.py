@@ -31,6 +31,8 @@ parser.add_argument('--latent_samp',    type=int,   default=10,         help='nu
 parser.add_argument('--num_save',       type=int,   default=8,          help='number of reconstructed images to save')
 parser.add_argument('--verbose',        type=int,   default=2,          help='1=verbose, 2=quiet')
 
+parser.add_argument('--steps_per_epoch',    type=int,   default=0,      help='steps per epoch')
+
 args = parser.parse_args()
 
 
@@ -38,6 +40,9 @@ def main():
 
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'checkpoints'), exist_ok=True)
+    os.makedirs(os.path.join(args.save_dir, 'latent_walk'), exist_ok=True)
+    os.makedirs(os.path.join(args.save_dir, 'input'), exist_ok=True)
+    os.makedirs(os.path.join(args.save_dir, 'reconstructed'), exist_ok=True)
         
     if args.phase == 'train':
         model = ImageVAE(args)
