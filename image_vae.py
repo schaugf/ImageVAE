@@ -13,8 +13,82 @@ from keras import metrics
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
-from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint
+from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
 
+
+class ImgSave(Callback):
+    
+    def __init__(self, latent_dim, latent_samp, batch_size, image_size, num_save, 
+                 image_channel, image_res, data_dir, save_dir, vae, decoder):
+        self.latent_dim     = latent_dim
+        self.latent_samp    = latent_samp
+        self.batch_size     = batch_size
+        self.image_size     = image_size
+        self.num_save       = num_save
+        self.image_channel  = image_channel
+        self.image_res      = image_res
+        self.data_dir       = data_dir
+        self.save_dir       = save_dir
+        self.vae            = vae
+        self.decoder        = decoder 
+        
+    def save_input_reconstruction(self):
+        """ save grid of both input and reconstructed images side by side
+        """
+        input_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
+        recon_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
+        
+        to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
+        
+        input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
+        scaled_input = input_images / float((2**self.image_res - 1))
+        recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
+        scaled_recon = recon_images * float((2**self.image_res - 1))
+        
+        idx = 0
+        for i in range(self.num_save):
+            for j in range(self.num_save):
+                input_figure[i * self.image_size : (i+1) * self.image_size,
+                             j * self.image_size : (j+1) * self.image_size, :] = input_images[idx,:,:,:]
+                recon_figure[i * self.image_size : (i+1) * self.image_size,
+                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,:]
+                idx += 1
+        
+        imageio.imwrite(os.path.join(self.save_dir, 'input_images.png'), input_figure)
+        imageio.imwrite(os.path.join(self.save_dir, 'recon_images.png'), recon_figure)
+    
+    
+    def latent_walk(self):
+        """ latent space walking
+        """
+        figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.image_channel))
+        grid_x = norm.ppf(np.linspace(0.05, 0.95, self.latent_samp))
+        
+        for i in range(self.latent_dim):
+            for j, xi in enumerate(grid_x):
+                z_sample = np.zeros(self.latent_dim)
+                z_sample[i] = xi
+        
+                z_sample = np.tile(z_sample, self.batch_size).reshape(self.batch_size, self.latent_dim)
+                x_decoded = self.decoder.predict(z_sample, batch_size=self.batch_size)
+                x_decoded = x_decoded * float((2**self.image_res - 1))
+                
+                sample = x_decoded[0].reshape(self.image_size, self.image_size, self.image_channel)
+                
+                figure[i * self.image_size: (i + 1) * self.image_size,
+                       j * self.image_size: (j + 1) * self.image_size, :] = sample
+        
+        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk.png'), figure)
+        
+        
+    def on_batch_end(self, batch, logs={}):
+        self.save_input_reconstruction()
+        
+        
+    def on_epoch_end(self, epoch, logs={}):
+        self.latent_walk()
+        
+        
 
 class ImageVAE():
     """ 2-dimensional variational autoencoder for latent phenotype capture
@@ -209,14 +283,28 @@ class ImageVAE():
         csv_logger = CSVLogger(os.path.join(self.save_dir, 'training.log'), separator='\t')
         checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 'checkpoints/vae_weights.hdf5'), 
                                        verbose=1, 
-                                       save_weights_only=True)        
+                                       save_weights_only=True)
         
+        # custom image saving callback
+        img_saver = ImgSave(self.latent_dim,
+                            self.latent_samp,
+                            self.batch_size,
+                            self.image_size, 
+                            self.num_save, 
+                            self.image_channel, 
+                            self.image_res, 
+                            self.data_dir, 
+                            self.save_dir, 
+                            self.vae,
+                            self.decoder)
+
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
                                callbacks = [term_nan,
                                             csv_logger,
-                                            checkpointer],
+                                            checkpointer,
+                                            img_saver],
                                steps_per_epoch = self.data_size // self.batch_size)                               
 
         self.vae.save_weights(os.path.join(self.save_dir, 'checkpoints/vae_weights.hdf5'))
@@ -225,58 +313,6 @@ class ImageVAE():
         self.latent_walk()
         self.save_input_reconstruction()
         
-        
-    def save_input_reconstruction(self):
-        """ save grid of both input and reconstructed images side by side
-        """
-        
-        input_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
-        recon_figure = np.zeros((self.image_size * self.num_save, self.image_size * self.num_save, self.image_channel))
-        
-        to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
-        
-        input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-        scaled_input = input_images / float((2**self.image_res - 1))
-        recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
-        scaled_recon = recon_images * float((2**self.image_res - 1))
-        
-        idx = 0
-        for i in range(self.num_save):
-            for j in range(self.num_save):
-                input_figure[i * self.image_size : (i+1) * self.image_size,
-                             j * self.image_size : (j+1) * self.image_size, :] = input_images[idx,:,:,:]
-                recon_figure[i * self.image_size : (i+1) * self.image_size,
-                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,:]
-                idx += 1
-        
-        imageio.imwrite(os.path.join(self.save_dir, 'input_images.png'), input_figure)
-        imageio.imwrite(os.path.join(self.save_dir, 'recon_images.png'), recon_figure)
-        
-    
-    def latent_walk(self):
-        """ latent space walking
-        """
-        
-        figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.image_channel))
-        
-        grid_x = norm.ppf(np.linspace(0.05, 0.95, self.latent_samp))
-        
-        for i in range(self.latent_dim):
-            for j, xi in enumerate(grid_x):
-                z_sample = np.zeros(self.latent_dim)
-                z_sample[i] = xi
-        
-                z_sample = np.tile(z_sample, self.batch_size).reshape(self.batch_size, self.latent_dim)
-                x_decoded = self.decoder.predict(z_sample, batch_size=self.batch_size)
-                x_decoded = x_decoded * float((2**self.image_res - 1))
-                
-                sample = x_decoded[0].reshape(self.image_size, self.image_size, self.image_channel)
-                
-                figure[i * self.image_size: (i + 1) * self.image_size,
-                       j * self.image_size: (j + 1) * self.image_size, :] = sample
-        
-        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk.png'), figure)
-    
     
     def encode(self):
         """ encode data with trained model
