@@ -56,7 +56,7 @@ class ImgSave(Callback):
                 idx += 1
         
         imageio.imwrite(os.path.join(self.save_dir, 'input_images.png'),
-                        input_figure)
+                        input_figure.astype(np.uint8))
         
     
     def save_input_reconstruction(self, epoch):
@@ -84,7 +84,8 @@ class ImgSave(Callback):
 
         imageio.imwrite(os.path.join(self.save_dir, 
                                      'reconstructed', 
-                                     'recon_images_epoch_{0:03d}.png'.format(epoch)), recon_figure)
+                                     'recon_images_epoch_{0:03d}.png'.format(epoch)),
+                        recon_figure.astype(np.uint8))
     
     
     def latent_walk(self, epoch):
@@ -108,7 +109,8 @@ class ImgSave(Callback):
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample
         
-        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), figure)
+        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), 
+                        figure.astype(np.uint8))
         
     def on_epoch_end(self, epoch, logs={}):
         self.save_input_reconstruction(epoch)
