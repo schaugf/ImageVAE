@@ -21,20 +21,19 @@ class ImgSave(Callback):
     latent space walk at the end of each epoch
     """
     
-    def __init__(self, latent_dim, latent_samp, batch_size, image_size, num_save, 
-                 image_channel, image_res, data_dir, save_dir, vae, decoder):
+    def __init__(self, model):
         
-        self.latent_dim     = latent_dim
-        self.latent_samp    = latent_samp
-        self.batch_size     = batch_size
-        self.image_size     = image_size
-        self.num_save       = num_save
-        self.image_channel  = image_channel
-        self.image_res      = image_res
-        self.data_dir       = data_dir
-        self.save_dir       = save_dir
-        self.vae            = vae
-        self.decoder        = decoder 
+        self.latent_dim     = model.latent_dim
+        self.latent_samp    = model.latent_samp
+        self.batch_size     = model.batch_size
+        self.image_size     = model.image_size
+        self.num_save       = model.num_save
+        self.image_channel  = model.image_channel
+        self.image_res      = model.image_res
+        self.data_dir       = model.data_dir
+        self.save_dir       = model.save_dir
+        self.vae            = model.vae
+        self.decoder        = model.decoder 
         
     
     def save_input_images(self):
@@ -325,17 +324,7 @@ class ImageVAE():
                                        save_weights_only=True)
         
         # custom image saving callback
-        img_saver = ImgSave(self.latent_dim,
-                            self.latent_samp,
-                            self.batch_size,
-                            self.image_size, 
-                            self.num_save, 
-                            self.image_channel, 
-                            self.image_res, 
-                            self.data_dir, 
-                            self.save_dir, 
-                            self.vae,
-                            self.decoder)
+        img_saver = ImgSave(self)
         
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
