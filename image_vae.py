@@ -38,16 +38,30 @@ class ImgSave(Callback):
         
     
     def save_input_images(self):
-        """ save input 
+        """ save input images
         """
+        input_figure = np.zeros((self.image_size * self.num_save, 
+                         self.image_size * self.num_save, 
+                         self.image_channel))
+        
+        to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
+        
+        input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
+                
+        idx = 0
+        for i in range(self.num_save):
+            for j in range(self.num_save):
+                input_figure[i * self.image_size : (i+1) * self.image_size,
+                             j * self.image_size : (j+1) * self.image_size, :] = input_images[idx,:,:,:]
+                idx += 1
+        
+        imageio.imwrite(os.path.join(self.save_dir, 'input_images.png'),
+                        input_figure)
+        
     
     def save_input_reconstruction(self, epoch):
         """ save grid of both input and reconstructed images side by side
         """
-        
-        input_figure = np.zeros((self.image_size * self.num_save, 
-                                 self.image_size * self.num_save, 
-                                 self.image_channel))
         
         recon_figure = np.zeros((self.image_size * self.num_save,
                                  self.image_size * self.num_save,
@@ -64,16 +78,10 @@ class ImgSave(Callback):
         idx = 0
         for i in range(self.num_save):
             for j in range(self.num_save):
-                input_figure[i * self.image_size : (i+1) * self.image_size,
-                             j * self.image_size : (j+1) * self.image_size, :] = input_images[idx,:,:,:]
                 recon_figure[i * self.image_size : (i+1) * self.image_size,
                              j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,:]
                 idx += 1
-        
-        imageio.imwrite(os.path.join(self.save_dir, 
-                                     'input', 
-                                     'input_images_epoch_{0:03d}.png'.format(epoch)), input_figure)
-        
+
         imageio.imwrite(os.path.join(self.save_dir, 
                                      'reconstructed', 
                                      'recon_images_epoch_{0:03d}.png'.format(epoch)), recon_figure)
@@ -107,7 +115,7 @@ class ImgSave(Callback):
         self.latent_walk(epoch)        
 
     def on_train_begin(self, logs={}):
-        self.save_input()
+        self.save_input_images()
         
 
 class ImageVAE():
