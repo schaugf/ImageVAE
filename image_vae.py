@@ -189,7 +189,7 @@ class ImageVAE():
         conv_2 = Conv2D(self.nfilters,
                         kernel_size=self.num_conv,
                         padding='same', activation='relu',
-                        strides=(2, 2))(conv_1)
+                        strides=2)(conv_1)
         
         conv_3 = Conv2D(self.nfilters,
                         kernel_size=self.num_conv,
@@ -238,19 +238,19 @@ class ImageVAE():
                                            activation='relu')
         
         decoder_deconv_2 = Conv2DTranspose(self.nfilters,
-                                   kernel_size=self.num_conv,
-                                   padding='same',
-                                   strides=1,
-                                   activation='relu')
+                                           kernel_size=self.num_conv,
+                                           padding='same',
+                                           strides=1,
+                                           activation='relu')
         
         decoder_deconv_3_upsamp = Conv2DTranspose(self.nfilters,
                                                   kernel_size = self.num_conv,
-                                                  strides = (2, 2),
+                                                  strides = 2,
                                                   padding = 'valid',
                                                   activation = 'relu')
         
         decoder_mean_squash = Conv2D(self.image_channel,
-                                     kernel_size = 2,
+                                     kernel_size = self.num_conv - 1,
                                      padding = 'valid',
                                      activation = 'sigmoid')
         
