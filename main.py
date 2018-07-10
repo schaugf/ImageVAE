@@ -33,6 +33,9 @@ parser.add_argument('--verbose',        type=int,   default=2,          help='1=
 
 parser.add_argument('--steps_per_epoch',    type=int,   default=0,      help='steps per epoch')
 
+parser.add_argument('--is_numpy',           type=bool,      default=False,      help='images are represented as numpy arrays')
+parser.add_argument('--channels_to_save',   type=tuple,     default=(0,1,2),    help='specify channels to save if image contains more than 3')
+
 args = parser.parse_args()
 
 
