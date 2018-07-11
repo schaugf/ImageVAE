@@ -314,6 +314,7 @@ class ImageVAE():
         
         #modified
         if(self.is_numpy):
+            print("HELLlloooooo")
             train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=True)
         else:
             train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
@@ -328,10 +329,10 @@ class ImageVAE():
         #end of modification
 
         term_nan = TerminateOnNaN()
-        
+
         csv_logger = CSVLogger(os.path.join(self.save_dir, 'training.log'), 
                                separator='\t')
-        
+
         checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 
                                                     'checkpoints/vae_weights.hdf5'), 
                                        verbose=1, 
@@ -339,7 +340,7 @@ class ImageVAE():
         
         # custom image saving callback
         #img_saver = ImgSave(self)
-        
+
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
@@ -352,6 +353,7 @@ class ImageVAE():
 
         self.vae.save_weights(os.path.join(self.save_dir, 
                                            'checkpoints/vae_weights.hdf5'))
+
         self.encode()        
 
     def encode(self):
