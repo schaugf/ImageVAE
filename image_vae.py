@@ -156,10 +156,8 @@ class ImageVAE():
         
         self.steps_per_epoch = args.steps_per_epoch
 
-        #modified
         self.is_numpy           = args.is_numpy
         self.channels_to_save   = args.channels_to_save
-        #end of modification
 
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
         
@@ -312,7 +310,6 @@ class ImageVAE():
         """ train VAE model
         """
         
-        #modified
         if(self.is_numpy):
             print("HELLlloooooo")
             train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=True)
@@ -326,7 +323,6 @@ class ImageVAE():
                     target_size = (self.image_size, self.image_size),
                     batch_size = self.batch_size,
                     class_mode = 'input')
-        #end of modification
 
         term_nan = TerminateOnNaN()
 
@@ -360,7 +356,6 @@ class ImageVAE():
         """ encode data with trained model
         """
         
-        #modified
         if(self.is_numpy):
             test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=False)
         else:
@@ -372,7 +367,6 @@ class ImageVAE():
                     batch_size = self.batch_size,
                     shuffle = False,
                     class_mode = 'input')
-        #end of modification
 
 
         print('encoding training data...')
@@ -384,7 +378,6 @@ class ImageVAE():
             writer = csv.writer(outFile)
             writer.writerows(x_test_encoded)
 
-#modified
 class DataGenerator(Sequence):
     def __init__(self, data_dir, batch_size, image_size, image_channel, shuffle):
         self.image_size = image_size
@@ -428,4 +421,3 @@ class DataGenerator(Sequence):
             Y[i,] = np.transpose(np.load(ID), (1,2,0))
 
         return X,Y
-#end of modification
