@@ -17,12 +17,12 @@ from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
 from keras.utils import Sequence
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
+
 '''
 class ImgSave(Callback):
     """ this callback saves sample input images, their reconstructions, and a 
     latent space walk at the end of each epoch
-    """
-    
+    """    
     def __init__(self, model):
         
         self.latent_dim     = model.latent_dim
@@ -156,8 +156,10 @@ class ImageVAE():
         
         self.steps_per_epoch = args.steps_per_epoch
 
+        #modified
         self.is_numpy           = args.is_numpy
         self.channels_to_save   = args.channels_to_save
+        #end of modification
 
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
         
@@ -310,8 +312,11 @@ class ImageVAE():
         """ train VAE model
         """
         
+        #modified
         if(self.is_numpy):
+            print("HELLlloooooo")
             train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=True)
+           # print(train_generator.__getitem__(1))
         else:
             train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
                                                horizontal_flip = True,
@@ -322,12 +327,13 @@ class ImageVAE():
                     target_size = (self.image_size, self.image_size),
                     batch_size = self.batch_size,
                     class_mode = 'input')
-
+        #end of modification
+        print("1")
         term_nan = TerminateOnNaN()
-
+        print("2")
         csv_logger = CSVLogger(os.path.join(self.save_dir, 'training.log'), 
                                separator='\t')
-
+        print("3")
         checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 
                                                     'checkpoints/vae_weights.hdf5'), 
                                        verbose=1, 
@@ -335,26 +341,28 @@ class ImageVAE():
         
         # custom image saving callback
         #img_saver = ImgSave(self)
-
+        print("4")
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
-                               callbacks = [term_nan,
+                               callbacks =  [
+                                            #term_nan,
                                             csv_logger,
-                                            checkpointer,
+                                            checkpointer
                                             #img_saver
 					    ],
                                steps_per_epoch = self.steps_per_epoch)                               
-
+        print("4.1")
         self.vae.save_weights(os.path.join(self.save_dir, 
                                            'checkpoints/vae_weights.hdf5'))
-
+        print("4.2")
         self.encode()        
-
+        print("5")
     def encode(self):
         """ encode data with trained model
         """
         
+        #modified
         if(self.is_numpy):
             test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=False)
         else:
@@ -366,6 +374,7 @@ class ImageVAE():
                     batch_size = self.batch_size,
                     shuffle = False,
                     class_mode = 'input')
+        #end of modification
 
 
         print('encoding training data...')
@@ -409,13 +418,13 @@ class DataGenerator(Sequence):
     def __data_generation(self, list_IDs_temp):
         # X : (n_samples, *dim, n_channels)
         # Initialization
-        X = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
-        Y = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
+        X = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel))
+        Y = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel))
+
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
-            X[i,] = np.transpose(np.load(ID), (1,2,0))
-            Y[i,] = np.transpose(np.load(ID), (1,2,0))
-
+            X[i,] = np.transpose(np.load(ID), (1,2,0))/(2**16 - 1)
+            Y[i,] = np.transpose(np.load(ID), (1,2,0))/(2**16 - 1)
         return X,Y
