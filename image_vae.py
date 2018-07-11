@@ -17,7 +17,7 @@ from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
 from keras.utils import Sequence
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
-
+'''
 class ImgSave(Callback):
     """ this callback saves sample input images, their reconstructions, and a 
     latent space walk at the end of each epoch
@@ -123,7 +123,7 @@ class ImgSave(Callback):
 
     def on_train_begin(self, logs={}):
         self.save_input_images()
-        
+'''       
 
 class ImageVAE():
     """ 2-dimensional variational autoencoder for latent phenotype capture
@@ -338,7 +338,7 @@ class ImageVAE():
                                        save_weights_only=True)
         
         # custom image saving callback
-        img_saver = ImgSave(self)
+        #img_saver = ImgSave(self)
         
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
@@ -346,7 +346,8 @@ class ImageVAE():
                                callbacks = [term_nan,
                                             csv_logger,
                                             checkpointer,
-                                            img_saver],
+                                            #img_saver
+                                            ],
                                steps_per_epoch = self.steps_per_epoch)                               
 
         self.vae.save_weights(os.path.join(self.save_dir, 
@@ -386,7 +387,7 @@ class DataGenerator(Sequence):
     def __init__(self, data_dir, batch_size, image_size, image_channel, shuffle):
         self.image_size = image_size
         self.batch_size = batch_size
-        self.list_IDs = glob.glob(os.path.join(self.data_dir, 'train', '*'))
+        self.list_IDs = glob.glob(os.path.join(data_dir, 'train', '*'))
         self.image_channel = image_channel
         self.shuffle = shuffle
         self.on_epoch_end()
@@ -404,7 +405,7 @@ class DataGenerator(Sequence):
         # Generate data
         X = self.__data_generation(list_IDs_temp)
 
-        return X
+        return X,X
 
     def on_epoch_end(self):
         self.indexes = np.arange(len(self.list_IDs))
@@ -414,7 +415,7 @@ class DataGenerator(Sequence):
     def __data_generation(self, list_IDs_temp):
         # X : (n_samples, *dim, n_channels)
         # Initialization
-        X = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
+        X = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel,))
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
