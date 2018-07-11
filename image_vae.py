@@ -311,7 +311,6 @@ class ImageVAE():
         """
         
         if(self.is_numpy):
-            print("HELLlloooooo")
             train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=True)
         else:
             train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
@@ -412,7 +411,6 @@ class DataGenerator(Sequence):
         # Initialization
         X = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
         Y = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
-
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
