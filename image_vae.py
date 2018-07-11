@@ -347,7 +347,7 @@ class ImageVAE():
                                             csv_logger,
                                             checkpointer,
                                             #img_saver
-                                            ],
+					    ],
                                steps_per_epoch = self.steps_per_epoch)                               
 
         self.vae.save_weights(os.path.join(self.save_dir, 
@@ -403,9 +403,9 @@ class DataGenerator(Sequence):
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        X = self.__data_generation(list_IDs_temp)
+        X,Y = self.__data_generation(list_IDs_temp)
 
-        return X,X
+        return X,Y
 
     def on_epoch_end(self):
         self.indexes = np.arange(len(self.list_IDs))
@@ -415,12 +415,15 @@ class DataGenerator(Sequence):
     def __data_generation(self, list_IDs_temp):
         # X : (n_samples, *dim, n_channels)
         # Initialization
-        X = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel,))
+        X = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
+        Y = np.empty((self.batch_size, self.image_size, self.image_size, self.image_channel))
+
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
-            X[i,] = np.load(ID)
+            X[i,] = np.transpose(np.load(ID), (1,2,0))
+            Y[i,] = np.transpose(np.load(ID), (1,2,0))
 
-        return X
+        return X,Y
 #end of modification
