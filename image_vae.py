@@ -156,10 +156,8 @@ class ImageVAE():
         
         self.steps_per_epoch = args.steps_per_epoch
 
-        #modified
         self.is_numpy           = args.is_numpy
         self.channels_to_save   = args.channels_to_save
-        #end of modification
 
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
         
@@ -311,12 +309,9 @@ class ImageVAE():
     def train(self):
         """ train VAE model
         """
-        
-        #modified
+
         if(self.is_numpy):
-            print("HELLlloooooo")
-            train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=True)
-           # print(train_generator.__getitem__(1))
+            train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, self.image_res, shuffle=True)
         else:
             train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
                                                horizontal_flip = True,
@@ -327,13 +322,12 @@ class ImageVAE():
                     target_size = (self.image_size, self.image_size),
                     batch_size = self.batch_size,
                     class_mode = 'input')
-        #end of modification
-        print("1")
+
         term_nan = TerminateOnNaN()
-        print("2")
+
         csv_logger = CSVLogger(os.path.join(self.save_dir, 'training.log'), 
                                separator='\t')
-        print("3")
+
         checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 
                                                     'checkpoints/vae_weights.hdf5'), 
                                        verbose=1, 
@@ -341,7 +335,7 @@ class ImageVAE():
         
         # custom image saving callback
         #img_saver = ImgSave(self)
-        print("4")
+
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
@@ -350,21 +344,20 @@ class ImageVAE():
                                             csv_logger,
                                             checkpointer
                                             #img_saver
-					    ],
+                                             ],
                                steps_per_epoch = self.steps_per_epoch)                               
-        print("4.1")
+
         self.vae.save_weights(os.path.join(self.save_dir, 
                                            'checkpoints/vae_weights.hdf5'))
-        print("4.2")
+
         self.encode()        
-        print("5")
+
     def encode(self):
         """ encode data with trained model
         """
-        
-        #modified
+
         if(self.is_numpy):
-            test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, shuffle=False)
+            test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, self.image_res, shuffle=False)
         else:
             test_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1))
             
@@ -374,8 +367,6 @@ class ImageVAE():
                     batch_size = self.batch_size,
                     shuffle = False,
                     class_mode = 'input')
-        #end of modification
-
 
         print('encoding training data...')
         x_test_encoded = self.encoder.predict_generator(test_generator,
@@ -387,11 +378,12 @@ class ImageVAE():
             writer.writerows(x_test_encoded)
 
 class DataGenerator(Sequence):
-    def __init__(self, data_dir, batch_size, image_size, image_channel, shuffle):
+    def __init__(self, data_dir, batch_size, image_size, image_channel, image_res, shuffle):
         self.image_size = image_size
         self.batch_size = batch_size
         self.list_IDs = glob.glob(os.path.join(data_dir, 'train', '*'))
         self.image_channel = image_channel
+        self.image_res = image_res
         self.shuffle = shuffle
         self.on_epoch_end()
 
@@ -406,9 +398,9 @@ class DataGenerator(Sequence):
         list_IDs_temp = [self.list_IDs[k] for k in indexes]
 
         # Generate data
-        X,Y = self.__data_generation(list_IDs_temp)
+        X = self.__data_generation(list_IDs_temp)
 
-        return X,Y
+        return X,X
 
     def on_epoch_end(self):
         self.indexes = np.arange(len(self.list_IDs))
@@ -416,15 +408,11 @@ class DataGenerator(Sequence):
             np.random.shuffle(self.indexes)
 
     def __data_generation(self, list_IDs_temp):
-        # X : (n_samples, *dim, n_channels)
         # Initialization
         X = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel))
-        Y = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel))
-
 
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
-            X[i,] = np.transpose(np.load(ID), (1,2,0))/(2**16 - 1)
-            Y[i,] = np.transpose(np.load(ID), (1,2,0))/(2**16 - 1)
-        return X,Y
+            X[i,] = np.transpose(np.load(ID), (1,2,0))/(2**self.image_res - 1)
+        return X
