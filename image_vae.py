@@ -15,6 +15,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
 from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
 
+os.environ['HDF5_USE_FILE_LOCKING']='FALSE' 
 
 class ImgSave(Callback):
     """ this callback saves sample input images, their reconstructions, and a 
@@ -46,7 +47,9 @@ class ImgSave(Callback):
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-                
+        #if self.image_channel == 1:
+        input_images = input_images[..., None]  # add extra index dimension
+
         idx = 0
         for i in range(self.num_save):
             for j in range(self.num_save):
@@ -70,9 +73,11 @@ class ImgSave(Callback):
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
         scaled_input = input_images / float((2**self.image_res - 1))
-        
+        scaled_input = scaled_input[..., None]
+       
         recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
         scaled_recon = recon_images * float((2**self.image_res - 1))
+#        scaled_recon = scaled_recon[..., None]
         
         idx = 0
         for i in range(self.num_save):
@@ -304,11 +309,13 @@ class ImageVAE():
         train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
                                            horizontal_flip = True,
                                            vertical_flip = True)
-                        
+
+        # colormode needs to be set depending on num_channels
         train_generator = train_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
                 batch_size = self.batch_size,
+                color_mode = 'grayscale',
                 class_mode = 'input')
                 
         # instantiate callbacks
@@ -350,6 +357,7 @@ class ImageVAE():
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
                 batch_size = self.batch_size,
+                color_mode = 'grayscale',
                 shuffle = False,
                 class_mode = 'input')
         
@@ -361,5 +369,4 @@ class ImageVAE():
         with outFile:
             writer = csv.writer(outFile)
             writer.writerows(x_test_encoded)
-        
         
