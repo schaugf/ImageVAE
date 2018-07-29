@@ -103,7 +103,7 @@ class ImgSave(Callback):
                         axs[i, j].set_title(to_load[k][-33:-17], fontsize=12)
                         axs[i, j + 1].set_title(to_load[k][-33:-17], fontsize=12)
             fig.tight_layout()
-            plt.savefig(os.path.join(self.save_dir,'reconstructed','epoch '+str(epoch)+'.tif'), dpi=300)
+            plt.savefig(os.path.join(self.save_dir,'reconstructed','epoch '+str(epoch)+'.png'), dpi=300)
         else:
             recon_figure = np.zeros((self.image_size * self.num_save,
                                      self.image_size * self.num_save,
