@@ -7,6 +7,12 @@ from PIL import Image
 import numpy as np
 from scipy.stats import norm
 
+#UNCOMMENT BELOW IF MATPLOTLIB IS GIVING YOU PROBLEMS
+# import matplotlib
+# matplotlib.use('TkAgg')
+
+from matplotlib import pyplot as plt
+
 from keras.layers import Input, Conv2D, Flatten, Dense, Reshape, Lambda, Conv2DTranspose
 from keras import optimizers
 from keras import metrics
@@ -18,7 +24,7 @@ from keras.utils import Sequence
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
 
-'''
+
 class ImgSave(Callback):
     """ this callback saves sample input images, their reconstructions, and a 
     latent space walk at the end of each epoch
@@ -36,30 +42,30 @@ class ImgSave(Callback):
         self.save_dir       = model.save_dir
         self.vae            = model.vae
         self.decoder        = model.decoder
-        
-        #modified
+
         self.is_numpy           = model.is_numpy
-        self.channels_to_save   = model.channels_to_save
-        #end of modification
-    
+        self.channels_to_use   = model.channels_to_use
+
     def save_input_images(self):
         """ save input images
         """
-        input_figure = np.zeros((self.image_size * self.num_save, 
-                         self.image_size * self.num_save, 
+        input_figure = np.zeros((self.image_size * self.num_save,
+                         self.image_size * self.num_save,
                          self.image_channel))
-        
+
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
-        
+
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-                
+        if self.image_channel == 1:
+            input_images = input_images[..., None]  # add extra index dimension
+
         idx = 0
         for i in range(self.num_save):
             for j in range(self.num_save):
                 input_figure[i * self.image_size : (i+1) * self.image_size,
                              j * self.image_size : (j+1) * self.image_size, :] = input_images[idx,:,:,:]
                 idx += 1
-        
+
         imageio.imwrite(os.path.join(self.save_dir, 'input_images.png'),
                         input_figure.astype(np.uint8))
         
@@ -67,63 +73,98 @@ class ImgSave(Callback):
     def save_input_reconstruction(self, epoch):
         """ save grid of both input and reconstructed images side by side
         """
-        
-        recon_figure = np.zeros((self.image_size * self.num_save,
-                                 self.image_size * self.num_save,
-                                 self.image_channel))
-        
-        to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
-        
-        input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-        scaled_input = input_images / float((2**self.image_res - 1))
-        
-        recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
-        scaled_recon = recon_images * float((2**self.image_res - 1))
-        
-        idx = 0
-        for i in range(self.num_save):
-            for j in range(self.num_save):
-                recon_figure[i * self.image_size : (i+1) * self.image_size,
-                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,:]
-                idx += 1
+        if (self.is_numpy):
+            to_load = np.array(glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save)])
 
-        imageio.imwrite(os.path.join(self.save_dir, 
-                                     'reconstructed', 
-                                     'recon_images_epoch_{0:03d}.png'.format(epoch)),
-                        recon_figure.astype(np.uint8))
-    
-    
+            input_numpys = np.zeros((to_load.size, self.image_size, self.image_size, self.image_channel))
+            for i, fname in enumerate(to_load):
+                temp = np.transpose(np.load(fname), (1, 2, 0))
+                channels = np.array(self.channels_to_use.split(',')).astype(int)
+                temp = temp[:, :, channels]
+                input_numpys[i,] = temp
+            scaled_input = input_numpys / float((2**self.image_res - 1))
+
+            recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
+            scaled_recon = recon_images * float((2**self.image_res - 1))
+
+            fig, axs = plt.subplots(self.image_channel, self.num_save * 2,
+                                    figsize=(self.num_save * 4, self.image_channel * 2))
+            for k, j in enumerate(range(0, self.num_save * 2, 2)):
+                for i in range(0, self.image_channel):
+                    axs[i, j].imshow(input_numpys[k, :, :, i], cmap='gray', vmax=20000)
+                    axs[i, j].set_xticks([])
+                    axs[i, j].set_yticks([])
+                    axs[i, j + 1].imshow(scaled_recon[k, :, :, i], cmap='gray', vmax=20000)
+                    axs[i, j + 1].set_xticks([])
+                    axs[i, j + 1].set_yticks([])
+                    if (j == 0):
+                        axs[i, j].set_ylabel('Channel ' + str(i + 1))
+                    if (i == 0):
+                        axs[i, j].set_title(to_load[k][-33:-17], fontsize=12)
+                        axs[i, j + 1].set_title(to_load[k][-33:-17], fontsize=12)
+            fig.tight_layout()
+            plt.savefig(os.path.join(self.save_dir,'reconstructed','epoch '+str(epoch)+'.tif'), dpi=300)
+        else:
+            recon_figure = np.zeros((self.image_size * self.num_save,
+                                     self.image_size * self.num_save,
+                                     self.image_channel))
+
+            to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
+
+            input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
+            scaled_input = input_images / float((2 ** self.image_res - 1))
+            scaled_input = scaled_input[..., None]
+
+            recon_images = self.vae.predict(scaled_input, batch_size=self.batch_size)
+            scaled_recon = recon_images * float((2 ** self.image_res - 1))
+            if self.image_channel == 1:
+                scaled_recon = scaled_recon[..., None]
+
+            idx = 0
+            for i in range(self.num_save):
+                for j in range(self.num_save):
+                    recon_figure[i * self.image_size: (i + 1) * self.image_size,
+                    j * self.image_size: (j + 1) * self.image_size, :] = scaled_recon[idx, :, :, :]
+                    idx += 1
+
+            imageio.imwrite(os.path.join(self.save_dir,
+                                         'reconstructed',
+                                         'recon_images_epoch_{0:03d}.png'.format(epoch)),
+                            recon_figure.astype(np.uint8))
+
     def latent_walk(self, epoch):
         """ latent space walking
         """
-        
+
         figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.image_channel))
         grid_x = norm.ppf(np.linspace(0.05, 0.95, self.latent_samp))
-        
+
         for i in range(self.latent_dim):
             for j, xi in enumerate(grid_x):
                 z_sample = np.zeros(self.latent_dim)
                 z_sample[i] = xi
-        
+
                 z_sample = np.tile(z_sample, self.batch_size).reshape(self.batch_size, self.latent_dim)
                 x_decoded = self.decoder.predict(z_sample, batch_size=self.batch_size)
                 x_decoded = x_decoded * float((2**self.image_res - 1))
-                
+
                 sample = x_decoded[0].reshape(self.image_size, self.image_size, self.image_channel)
-                
+
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample
-        
-        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), 
+
+        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)),
                         figure.astype(np.uint8))
         
     def on_epoch_end(self, epoch, logs={}):
         self.save_input_reconstruction(epoch)
-        self.latent_walk(epoch)        
+        if (not self.is_numpy):
+            self.latent_walk(epoch)
 
     def on_train_begin(self, logs={}):
-        self.save_input_images()
-'''       
+        if (not self.is_numpy):
+            self.save_input_images()
+
 
 class ImageVAE():
     """ 2-dimensional variational autoencoder for latent phenotype capture
@@ -135,7 +176,7 @@ class ImageVAE():
 
         self.data_dir       = args.data_dir
         self.save_dir       = args.save_dir
-        
+
         self.image_size     = args.image_size
         self.image_channel  = args.image_channel
         self.image_res      = args.image_res
@@ -157,7 +198,7 @@ class ImageVAE():
         self.steps_per_epoch = args.steps_per_epoch
 
         self.is_numpy           = args.is_numpy
-        self.channels_to_save   = args.channels_to_save
+        self.channels_to_use   = args.channels_to_use
 
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
         
@@ -311,7 +352,8 @@ class ImageVAE():
         """
 
         if(self.is_numpy):
-            train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, self.image_res, shuffle=True)
+            train_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel,
+                                            self.image_res, self.channels_to_use, shuffle=True, )
         else:
             train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
                                                horizontal_flip = True,
@@ -334,17 +376,17 @@ class ImageVAE():
                                        save_weights_only=True)
         
         # custom image saving callback
-        #img_saver = ImgSave(self)
+        img_saver = ImgSave(self)
 
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
                                callbacks =  [
-                                            #term_nan,
+                                            term_nan,
                                             csv_logger,
-                                            checkpointer
-                                            #img_saver
-                                             ],
+                                            checkpointer,
+                                            img_saver,
+                                            ],
                                steps_per_epoch = self.steps_per_epoch)                               
 
         self.vae.save_weights(os.path.join(self.save_dir, 
@@ -357,7 +399,8 @@ class ImageVAE():
         """
 
         if(self.is_numpy):
-            test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel, self.image_res, shuffle=False)
+            test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel,
+                                           self.image_res, self.channels_to_use, shuffle=False)
         else:
             test_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1))
             
@@ -370,15 +413,25 @@ class ImageVAE():
 
         print('encoding training data...')
         x_test_encoded = self.encoder.predict_generator(test_generator,
-                                                        steps = self.data_size // self.batch_size)
-        
+                                                        steps = self.data_size // self.batch_size, verbose = 1)
+
+        list_IDs = np.array(glob.glob(os.path.join(self.data_dir, 'train', '*')))
+        labeled_encodings = np.array(x_test_encoded, dtype=object)
+        labeled_encodings = np.insert(labeled_encodings, 0,
+                                      list_IDs[:((self.data_size // self.batch_size)*self.batch_size)], axis=1)
+
         outFile = open(os.path.join(self.save_dir, 'encodings.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
+            writer.writerows(labeled_encodings)
+
+        outFile2 = open(os.path.join(self.save_dir, 'encodings2.csv'), 'w')
+        with outFile2:
+            writer = csv.writer(outFile2)
             writer.writerows(x_test_encoded)
 
 class DataGenerator(Sequence):
-    def __init__(self, data_dir, batch_size, image_size, image_channel, image_res, shuffle):
+    def __init__(self, data_dir, batch_size, image_size, image_channel, image_res, channels_to_use, shuffle):
         self.image_size = image_size
         self.batch_size = batch_size
         self.list_IDs = glob.glob(os.path.join(data_dir, 'train', '*'))
@@ -386,6 +439,7 @@ class DataGenerator(Sequence):
         self.image_res = image_res
         self.shuffle = shuffle
         self.on_epoch_end()
+        self.channels_to_use = channels_to_use
 
     def __len__(self):
         return int(np.floor(len(self.list_IDs) / self.batch_size))
@@ -414,5 +468,8 @@ class DataGenerator(Sequence):
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
-            X[i,] = np.transpose(np.load(ID), (1,2,0))/(2**self.image_res - 1)
+            temp = np.transpose(np.load(ID), (1,2,0))/(2**self.image_res - 1)
+            channels = np.array(self.channels_to_use.split(',')).astype(int)
+            temp = temp[:,:, channels]
+            X[i,] = temp
         return X

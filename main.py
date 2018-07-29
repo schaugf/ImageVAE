@@ -5,7 +5,7 @@ Image Variational Autoencoding
 import sys
 import os
 import argparse
-
+import numpy as np
 from image_vae import ImageVAE
 
 parser = argparse.ArgumentParser(description='')
@@ -34,7 +34,7 @@ parser.add_argument('--verbose',        type=int,   default=2,          help='1=
 parser.add_argument('--steps_per_epoch',    type=int,   default=0,      help='steps per epoch')
 
 parser.add_argument('--is_numpy',           type=bool,      default=False,      help='images are represented as numpy arrays')
-parser.add_argument('--channels_to_save',   type=tuple,     default=(0,1,2),    help='specify channels to save if image contains more than 3')
+parser.add_argument('--channels_to_use',   type=str,     default='all',     help='specify channels to use if complex images are used')
 
 args = parser.parse_args()
 
@@ -46,7 +46,14 @@ def main():
     os.makedirs(os.path.join(args.save_dir, 'latent_walk'), exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'input'), exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'reconstructed'), exist_ok=True)
-        
+
+    if args.channels_to_use != 'all':
+        channels = np.array(args.channels_to_use.split(',')).astype(int)
+        if len(channels) != args.image_channel:
+            sys.exit('Number of specified channels does not image_channel argument!')
+    else:
+        args.channels_to_use = ','.join(str(i) for i in list(range(args.image_channel)))
+
     if args.phase == 'train':
         model = ImageVAE(args)
         model.train()
@@ -58,7 +65,6 @@ def main():
         model = ImageVAE(args)
         model.vae.load_weights(args.checkpoint)
         model.train()
-        
     
 if __name__ == '__main__':
     main()
