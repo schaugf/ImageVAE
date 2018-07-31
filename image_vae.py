@@ -8,8 +8,8 @@ import numpy as np
 from scipy.stats import norm
 
 #UNCOMMENT BELOW IF MATPLOTLIB IS GIVING YOU PROBLEMS
-# import matplotlib
-# matplotlib.use('TkAgg')
+import matplotlib
+matplotlib.use('TkAgg')
 
 from matplotlib import pyplot as plt
 
@@ -56,8 +56,7 @@ class ImgSave(Callback):
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
 
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-        if self.image_channel == 1:
-            input_images = input_images[..., None]  # add extra index dimension
+        input_images = input_images[..., None]  # add extra index dimension
 
         idx = 0
         for i in range(self.num_save):
@@ -87,23 +86,40 @@ class ImgSave(Callback):
             recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
             scaled_recon = recon_images * float((2**self.image_res - 1))
 
-            fig, axs = plt.subplots(self.image_channel, self.num_save * 2,
-                                    figsize=(self.num_save * 4, self.image_channel * 2))
-            for k, j in enumerate(range(0, self.num_save * 2, 2)):
-                for i in range(0, self.image_channel):
-                    axs[i, j].imshow(input_numpys[k, :, :, i], cmap='gray', vmax=20000)
-                    axs[i, j].set_xticks([])
-                    axs[i, j].set_yticks([])
-                    axs[i, j + 1].imshow(scaled_recon[k, :, :, i], cmap='gray', vmax=20000)
-                    axs[i, j + 1].set_xticks([])
-                    axs[i, j + 1].set_yticks([])
+            if self.image_channel == 1:
+                fig, axs = plt.subplots(1, self.num_save * 2,
+                                        figsize=(self.num_save * 4, self.image_channel * 2))
+                for k, j in enumerate(range(0, self.num_save * 2, 2)):
+                    axs[j].imshow(input_numpys[k, :, :, 0], cmap='gray', vmax=20000)
+                    axs[j].set_xticks([])
+                    axs[j].set_yticks([])
+                    axs[j + 1].imshow(scaled_recon[k, :, :, 0], cmap='gray', vmax=20000)
+                    axs[j + 1].set_xticks([])
+                    axs[j + 1].set_yticks([])
                     if (j == 0):
-                        axs[i, j].set_ylabel('Channel ' + str(i + 1))
-                    if (i == 0):
-                        axs[i, j].set_title(to_load[k][-33:-17], fontsize=12)
-                        axs[i, j + 1].set_title(to_load[k][-33:-17], fontsize=12)
-            fig.tight_layout()
-            plt.savefig(os.path.join(self.save_dir,'reconstructed','epoch '+str(epoch)+'.png'), dpi=300)
+                        axs[j].set_ylabel('Channel 1')
+                    axs[j].set_title(to_load[k][-33:-17], fontsize=12)
+                    axs[j + 1].set_title(to_load[k][-33:-17], fontsize=12)
+                fig.tight_layout()
+                plt.savefig(os.path.join(self.save_dir,'reconstructed','epoch '+str(epoch)+'.png'))
+            else:
+                fig, axs = plt.subplots(self.image_channel, self.num_save * 2,
+                                        figsize=(self.num_save * 4, self.image_channel * 2))
+                for k, j in enumerate(range(0, self.num_save * 2, 2)):
+                    for i in range(0, self.image_channel):
+                        axs[i, j].imshow(input_numpys[k, :, :, i], cmap='gray', vmax=20000)
+                        axs[i, j].set_xticks([])
+                        axs[i, j].set_yticks([])
+                        axs[i, j + 1].imshow(scaled_recon[k, :, :, i], cmap='gray', vmax=20000)
+                        axs[i, j + 1].set_xticks([])
+                        axs[i, j + 1].set_yticks([])
+                        if (j == 0):
+                            axs[i, j].set_ylabel('Channel ' + str(i + 1))
+                        if (i == 0):
+                            axs[i, j].set_title(to_load[k][-33:-17], fontsize=12)
+                            axs[i, j + 1].set_title(to_load[k][-33:-17], fontsize=12)
+                fig.tight_layout()
+                plt.savefig(os.path.join(self.save_dir,'reconstructed','epoch '+str(epoch)+'.png'))
         else:
             recon_figure = np.zeros((self.image_size * self.num_save,
                                      self.image_size * self.num_save,
@@ -117,8 +133,6 @@ class ImgSave(Callback):
 
             recon_images = self.vae.predict(scaled_input, batch_size=self.batch_size)
             scaled_recon = recon_images * float((2 ** self.image_res - 1))
-            if self.image_channel == 1:
-                scaled_recon = scaled_recon[..., None]
 
             idx = 0
             for i in range(self.num_save):
