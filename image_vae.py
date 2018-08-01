@@ -9,7 +9,7 @@ from scipy.stats import norm
 
 #UNCOMMENT BELOW IF MATPLOTLIB IS GIVING YOU PROBLEMS
 import matplotlib
-matplotlib.use('TkAgg')
+matplotlib.use('Agg')
 
 from matplotlib import pyplot as plt
 
