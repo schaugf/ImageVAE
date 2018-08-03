@@ -427,7 +427,7 @@ class ImageVAE():
 
         print('encoding training data...')
         x_test_encoded = self.encoder.predict_generator(test_generator,
-                                                        steps = self.data_size // self.batch_size, verbose = 1)
+                                                        steps = self.data_size // self.batch_size)
 
         list_IDs = np.array(glob.glob(os.path.join(self.data_dir, 'train', '*')))
         labeled_encodings = np.array(x_test_encoded, dtype=object)
