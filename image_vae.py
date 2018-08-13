@@ -47,8 +47,8 @@ class ImgSave(Callback):
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-        #if self.image_channel == 1:
-        input_images = input_images[..., None]  # add extra index dimension
+        if self.image_channel == 1:
+            input_images = input_images[..., None]  # add extra index dimension
 
         idx = 0
         for i in range(self.num_save):
@@ -73,7 +73,8 @@ class ImgSave(Callback):
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
         scaled_input = input_images / float((2**self.image_res - 1))
-        scaled_input = scaled_input[..., None]
+        if self.image_channel == 1:
+            scaled_input = scaled_input[..., None]
        
         recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
         scaled_recon = recon_images * float((2**self.image_res - 1))
@@ -311,12 +312,23 @@ class ImageVAE():
                                            vertical_flip = True)
 
         # colormode needs to be set depending on num_channels
-        train_generator = train_datagen.flow_from_directory(
+        if self.image_channel == 1:
+           train_generator = train_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
                 batch_size = self.batch_size,
                 color_mode = 'grayscale',
                 class_mode = 'input')
+       
+        elif self.image_channel == 3:
+           train_generator = train_datagen.flow_from_directory(
+                self.data_dir,
+                target_size = (self.image_size, self.image_size),
+                batch_size = self.batch_size,
+                color_mode = 'rgb',
+                class_mode = 'input')
+           
+        # for higher number of channels
                 
         # instantiate callbacks
         
@@ -353,13 +365,24 @@ class ImageVAE():
         
         test_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1))
         
-        test_generator = test_datagen.flow_from_directory(
+        if self.image_channel == 1:
+            test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
                 batch_size = self.batch_size,
                 color_mode = 'grayscale',
                 shuffle = False,
                 class_mode = 'input')
+        elif self.image_channel == 3:
+            test_generator = test_datagen.flow_from_directory(
+                self.data_dir,
+                target_size = (self.image_size, self.image_size),
+                batch_size = self.batch_size,
+                color_mode = 'rgb',
+                shuffle = False,
+                class_mode = 'input')
+        
+        #  else for more channels
         
         print('encoding training data...')
         x_test_encoded = self.encoder.predict_generator(test_generator,
