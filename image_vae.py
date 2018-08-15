@@ -338,11 +338,13 @@ class ImageVAE():
                                separator='\t')
         
         checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 
-                                                    'checkpoints/vae_weights.hdf5'), 
+                                                    'checkpoints/vae_weights.hdf5'),
                                        verbose=1, 
+                                       save_best_only=True,
                                        save_weights_only=True)
         
         # custom image saving callback
+        
         img_saver = ImgSave(self)
         
         self.history = self.vae.fit_generator(train_generator,
@@ -350,7 +352,7 @@ class ImageVAE():
                                verbose = self.verbose,
                                callbacks = [term_nan,
                                             csv_logger,
-                                            checkpointer,
+                                            #checkpointer,
                                             img_saver],
                                steps_per_epoch = self.steps_per_epoch)                               
 
@@ -369,27 +371,37 @@ class ImageVAE():
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
-                batch_size = self.batch_size,
+                batch_size = 1,
                 color_mode = 'grayscale',
                 shuffle = False,
                 class_mode = 'input')
+            
         elif self.image_channel == 3:
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
-                batch_size = self.batch_size,
+                batch_size = 1,
                 color_mode = 'rgb',
                 shuffle = False,
                 class_mode = 'input')
         
-        #  else for more channels
+       
+        # save generated filenames
+        
+        filenames = test_generator.filenames
+        print(filenames)
+        
+        fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
+        with fnFile:
+            writer = csv.writer(fnFile)
+            writer.writerows(filenames)
         
         print('encoding training data...')
-        x_test_encoded = self.encoder.predict_generator(test_generator,
-                                                        steps = self.data_size // self.batch_size)
+        encoded = self.encoder.predict_generator(test_generator,
+                                                        steps = self.data_size)
         
         outFile = open(os.path.join(self.save_dir, 'encodings.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
-            writer.writerows(x_test_encoded)
+            writer.writerows(encoded)
         
