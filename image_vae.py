@@ -389,7 +389,6 @@ class ImageVAE():
         # save generated filenames
         
         filenames = test_generator.filenames
-        print(filenames)
         
         fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
         with fnFile:
@@ -398,7 +397,7 @@ class ImageVAE():
         
         print('encoding training data...')
         encoded = self.encoder.predict_generator(test_generator,
-                                                        steps = self.data_size)
+                                                 steps = self.data_size)
         
         outFile = open(os.path.join(self.save_dir, 'encodings.csv'), 'w')
         with outFile:
