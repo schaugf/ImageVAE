@@ -494,8 +494,7 @@ class ImageVAE():
             fnames = (os.listdir(os.path.join(self.data_dir, 'train')))
             fnames_counter = 0
 
-            # print('calculating dice coefficients...')
-            print('generating reconstructions...')
+            print('calculating dice coefficients...')
             for gen_batch in range(len(test_generator)):
                 input_batch = test_generator[gen_batch][0]
                 recon_batch = self.vae.predict(input_batch, batch_size=self.batch_size)
