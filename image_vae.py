@@ -15,6 +15,8 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
 from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
 
+from clr_callback import CyclicLR
+
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE' 
 
 class ImgSave(Callback):
@@ -343,6 +345,9 @@ class ImageVAE():
                                        save_best_only=True,
                                        save_weights_only=True)
         
+        clr = CyclicLR(base_lr=0.001, max_lr=0.006,
+                       step_size=2000., mode='triangular')
+        
         # custom image saving callback
         
         img_saver = ImgSave(self)
@@ -353,6 +358,7 @@ class ImageVAE():
                                callbacks = [term_nan,
                                             csv_logger,
                                             #checkpointer,
+                                            clr,
                                             img_saver],
                                steps_per_epoch = self.steps_per_epoch)                               
 
@@ -391,7 +397,7 @@ class ImageVAE():
         fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
         with fnFile:
             writer = csv.writer(fnFile)
-            writer.writerows(filenames)
+            writer.writerow(filenames)
         
         print('encoding training data...')
         encoded = self.encoder.predict_generator(test_generator,
