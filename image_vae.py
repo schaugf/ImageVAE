@@ -356,8 +356,6 @@ class ImageVAE():
                                             img_saver],
                                steps_per_epoch = self.steps_per_epoch)                               
 
-        self.vae.save_weights(os.path.join(self.save_dir, 
-                                           'checkpoints/vae_weights.hdf5'))
         self.encode()        
         
     
