@@ -8,4 +8,8 @@ By specifying the size of the latent feature vector, these networks learn salien
 
 ![VAE](img/mema_vae.png)
 
+##	Microenvironment Microarray Data
+
+This model was originally developed to analyze images of multicellular growth response to microenvironment perturbation, as shown in the figure.
+These data are available for download at original resolution at <https://www.synapse.org/mep_lincs>.
 
