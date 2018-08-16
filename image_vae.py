@@ -476,91 +476,72 @@ class ImageVAE():
             writer = csv.writer(enc)
             writer.writerows(x_test_encoded)
 
-        self.dice()
-
     def dice(self):
         """calculates the dice coefficient and area for every image
         results are saved as separate .csv files
         """
 
-        if (self.is_numpy):
+        if self.is_numpy:
             test_generator = DataGenerator(self.data_dir, self.batch_size, self.image_size, self.image_channel,
                                            self.image_res, self.channels_to_use, self.channel_first, shuffle=False)
+
+            dice_vals = np.zeros((len(test_generator) * self.batch_size, self.image_channel))
+            coverage = np.zeros((len(test_generator) * self.batch_size, self.image_channel))
+
+            channels = np.array(self.channels_to_use.split(',')).astype(int)
+            ch_labels = np.array(self.channel_labels.split(','))
+
+            fnames = (os.listdir(os.path.join(self.data_dir, 'train')))
+            fnames_counter = 0
+
+            # print('calculating dice coefficients...')
+            print('generating reconstructions...')
+            for gen_batch in range(len(test_generator)):
+                input_batch = test_generator[gen_batch][0]
+                recon_batch = self.vae.predict(input_batch, batch_size=self.batch_size)
+                for cell in range(self.batch_size):
+                    for ch in range(len(channels)):
+                        if self.save_individual:
+                            fig, axs = plt.subplots(1, 2, figsize=(4, 2))
+                            axs[0].imshow(input_batch[cell, :, :, ch] * float((2 ** self.image_res - 1)),
+                                          cmap='gray', vmax=(2 ** self.image_res - 1))
+                            axs[0].set_xticks([])
+                            axs[0].set_yticks([])
+                            axs[1].imshow(recon_batch[cell, :, :, ch] * float((2 ** self.image_res - 1)),
+                                          cmap='gray', vmax=(2 ** self.image_res - 1))
+                            axs[1].set_xticks([])
+                            axs[1].set_yticks([])
+                            axs[0].set_ylabel(ch_labels[ch])
+                            fig.tight_layout()
+                            plt.savefig(os.path.join(self.save_dir, 'individual_cells',
+                                                     fnames[fnames_counter][:-4] + '_' + ch_labels[ch] + '.png'))
+                            fnames_counter += 1
+                            plt.close("all")
+
+                        coverage[(gen_batch * self.batch_size) + cell, ch] = np.count_nonzero(input_batch[cell, :, :, ch])
+                        input_bool = input_batch[cell, :, :, ch].astype(bool)
+                        recon_bool = recon_batch[cell, :, :, ch].astype(bool)
+                        intersection = np.logical_and(input_bool, recon_bool)
+                        im_sum = input_bool.sum() + recon_bool.sum()
+                        if im_sum == 0:
+                            dice_vals[(gen_batch * self.batch_size) + cell, ch] = 1
+                        else:
+                            dice_coef = 2. * intersection.sum() / (input_bool.sum() + recon_bool.sum())
+                            dice_vals[(gen_batch * self.batch_size) + cell, ch] = dice_coef
+
+            dv = open(os.path.join(self.save_dir, 'dice_vals.csv'), 'w')
+            with dv:
+                writer = csv.writer(dv)
+                writer.writerows(dice_vals)
+
+            cov = open(os.path.join(self.save_dir, 'coverage.csv'), 'w')
+            with cov:
+                writer = csv.writer(cov)
+                writer.writerows(coverage)
+            print('calculated dice coefficients and coverage!')
+
         else:
-            test_datagen = ImageDataGenerator(rescale=1. / (2 ** self.image_res - 1))
-
-            if self.image_channel == 1:
-                test_generator = test_datagen.flow_from_directory(
-                    self.data_dir,
-                    target_size=(self.image_size, self.image_size),
-                    batch_size=self.batch_size,
-                    color_mode='grayscale',
-                    shuffle=False,
-                    class_mode='input')
-
-            else:
-                test_generator = test_datagen.flow_from_directory(
-                    self.data_dir,
-                    target_size=(self.image_size, self.image_size),
-                    batch_size=self.batch_size,
-                    color_mode='rgb',
-                    shuffle=False,
-                    class_mode='input')
-
-        dice_vals = np.zeros((len(test_generator) * self.batch_size, self.image_channel))
-        coverage = np.zeros((len(test_generator) * self.batch_size, self.image_channel))
-
-        channels = np.array(self.channels_to_use.split(',')).astype(int)
-        ch_labels = np.array(self.channel_labels.split(','))
-
-        fnames = (os.listdir(os.path.join(self.data_dir, 'train')))
-        fnames_counter = 0
-
-        # print('calculating dice coefficients...')
-        print('generating reconstructions...')
-        for gen_batch in range(len(test_generator)):
-            input_batch = test_generator[gen_batch][0]
-            recon_batch = self.vae.predict(input_batch, batch_size=self.batch_size)
-            for cell in range(self.batch_size):
-                for ch in range(len(channels)):
-                    if self.save_individual:
-                        fig, axs = plt.subplots(1, 2, figsize=(4, 2))
-                        axs[0].imshow(input_batch[cell, :, :, ch] * float((2 ** self.image_res - 1)),
-                                      cmap='gray', vmax=(2 ** self.image_res - 1))
-                        axs[0].set_xticks([])
-                        axs[0].set_yticks([])
-                        axs[1].imshow(recon_batch[cell, :, :, ch] * float((2 ** self.image_res - 1)),
-                                      cmap='gray', vmax=(2 ** self.image_res - 1))
-                        axs[1].set_xticks([])
-                        axs[1].set_yticks([])
-                        axs[0].set_ylabel(ch_labels[ch])
-                        fig.tight_layout()
-                        plt.savefig(os.path.join(self.save_dir, 'individual_cells',
-                                                 fnames[fnames_counter][:-4] + '_' + ch_labels[ch] + '.png'))
-                        fnames_counter += 1
-                        plt.close("all")
-
-                    coverage[(gen_batch * self.batch_size) + cell, ch] = np.count_nonzero(input_batch[cell, :, :, ch])
-                    input_bool = input_batch[cell, :, :, ch].astype(bool)
-                    recon_bool = recon_batch[cell, :, :, ch].astype(bool)
-                    intersection = np.logical_and(input_bool, recon_bool)
-                    im_sum = input_bool.sum() + recon_bool.sum()
-                    if im_sum == 0:
-                        dice_vals[(gen_batch * self.batch_size) + cell, ch] = 1
-                    else:
-                        dice_coef = 2. * intersection.sum() / (input_bool.sum() + recon_bool.sum())
-                        dice_vals[(gen_batch * self.batch_size) + cell, ch] = dice_coef
-
-        dv = open(os.path.join(self.save_dir, 'dice_vals.csv'), 'w')
-        with dv:
-            writer = csv.writer(dv)
-            writer.writerows(dice_vals)
-
-        cov = open(os.path.join(self.save_dir, 'coverage.csv'), 'w')
-        with cov:
-            writer = csv.writer(cov)
-            writer.writerows(coverage)
-        print('calculated dice coefficients and coverage!')
+            print('Must use numpy arrays to calculate dice coefficients and coverage!')
 
 
 class DataGenerator(Sequence):
