@@ -119,10 +119,20 @@ class VAEcallback(Callback):
         imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), 
                         figure.astype(np.uint8))
         
+        
     def on_epoch_end(self, epoch, logs={}):
         self.save_input_reconstruction(epoch)
         self.latent_walk(epoch)        
 
+
     def on_train_begin(self, logs={}):
         self.save_input_images()
+
+    
+    def on_train_end(self, logs={}):
+        print('animating training...')
+        os.system('convert -delay 0.1 %s/latent_walk/* %s/latent_walk_animated.gif' % 
+                  (self.save_dir, self.save_dir))
         
+        os.system('convert -delay 0.1 %s/reconstructed/* %s/reconstructed_animated.gif' % 
+                  (self.save_dir, self.save_dir))
