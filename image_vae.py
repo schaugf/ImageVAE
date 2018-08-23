@@ -7,10 +7,11 @@ from keras import metrics
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
-from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, Callback
+from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint
 
 from clr_callback import CyclicLR
 from vae_callback import VAEcallback
+from numpydatagenerator import NumpyDataGenerator
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE' 
 
@@ -217,6 +218,17 @@ class ImageVAE():
                 color_mode = 'rgb',
                 class_mode = 'input')
            
+        else:
+          # expecting data saved as numpy array
+            train_generator = NumpyDataGenerator(self.data_dir,
+                                           self.batch_size,
+                                           self.image_size,
+                                           self.image_channel,
+                                           self.image_res,
+                                           #self.channels_to_use,
+                                           #self.channel_first,
+                                           shuffle=False)
+       
         # for higher number of channels
                 
         # instantiate callbacks
@@ -243,21 +255,11 @@ class ImageVAE():
                                callbacks = [term_nan,
                                             csv_logger,
                                             checkpointer,
-                                            clr,
-                                            vaecb],
+                                            clr],
+                                            #,vaecb],
                                steps_per_epoch = self.steps_per_epoch)                               
 
         self.encode()
-        
-        #   generate animated gifs of the training process
-        
-        print('animating training...')
-        
-        os.system('convert -delay 0.1 %s/latent_walk/* %s/latent_walk_animated.gif' % 
-                  (self.save_dir, self.save_dir))
-        
-        os.system('convert -delay 0.1 %s/reconstructed/* %s/reconstructed_animated.gif' % 
-                  (self.save_dir, self.save_dir))
         
         print('done!')
     
@@ -285,6 +287,16 @@ class ImageVAE():
                 shuffle = False,
                 class_mode = 'input')
         
+        else:
+          # expecting data saved as numpy array
+            test_generator = NumpyDataGenerator(self.data_dir,
+                                           self.batch_size,
+                                           self.image_size,
+                                           self.image_channel,
+                                           self.image_res,
+                                           self.channels_to_use,
+                                           self.channel_first,
+                                           shuffle=False)
        
         # save generated filenames
         
