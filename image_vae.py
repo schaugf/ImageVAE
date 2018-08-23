@@ -47,6 +47,7 @@ class ImageVAE():
         self.steps_per_epoch = args.steps_per_epoch
         
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
+        self.file_names = os.listdir(os.path.join(self.data_dir, 'train'))
         
         if self.steps_per_epoch == 0:
             self.steps_per_epoch = self.data_size // self.batch_size
@@ -294,18 +295,16 @@ class ImageVAE():
                                            self.image_size,
                                            self.image_channel,
                                            self.image_res,
-                                           self.channels_to_use,
-                                           self.channel_first,
+                                           #self.channels_to_use,
+                                           #self.channel_first,
                                            shuffle=False)
        
         # save generated filenames
         
-        filenames = test_generator.filenames
-        
         fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
         with fnFile:
             writer = csv.writer(fnFile)
-            writer.writerow(filenames)
+            writer.writerow(self.file_names)
         
         print('encoding training data...')
         encoded = self.encoder.predict_generator(test_generator,
