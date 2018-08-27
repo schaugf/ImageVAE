@@ -14,15 +14,17 @@ parser.add_argument('--data_dir',       type=str,   default='data',     help='in
 parser.add_argument('--save_dir',       type=str,   default='save',     help='save directory')
 parser.add_argument('--phase',          type=str,   default='train',    help='train or load')
 parser.add_argument('--checkpoint',     type=str,   default='NA',       help='checkpoint weight file')
+parser.add_argument('--use_vaecb',		type=int,	default=1,			help='use VAE callback? 1=yes, 0=no')
+parser.add_argument('--use_clr',		type=int,	default=1,			help='use cyclic learning rate? 1=yes, 0=no')
 
 parser.add_argument('--image_size',     type=int,   default=64,         help='image size')
 parser.add_argument('--image_channel',  type=int,   default=3,          help='image channels')
-parser.add_argument('--image_res',      type=int,   default=8,          help='image resolution (8 or 16)')
+parser.add_argument('--image_res',      type=int,   default=16,          help='image resolution (8 or 16)')
 
 parser.add_argument('--latent_dim',     type=int,   default=2,          help='latent dimension')
-parser.add_argument('--inter_dim',      type=int,   default=64,         help='intermediate dimension')
+parser.add_argument('--inter_dim',      type=int,   default=128,         help='intermediate dimension')
 parser.add_argument('--num_conv',       type=int,   default=3,          help='number of convolutions')
-parser.add_argument('--batch_size',     type=int,   default=32,         help='batch size')
+parser.add_argument('--batch_size',     type=int,   default=16,         help='batch size')
 parser.add_argument('--epochs',         type=int,   default=2,          help='training epochs')
 parser.add_argument('--nfilters',       type=int,   default=64,         help='num convolution filters')
 parser.add_argument('--learn_rate',     type=float, default=0.001,      help='learning rate')
@@ -41,7 +43,6 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'checkpoints'), exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'latent_walk'), exist_ok=True)
-    os.makedirs(os.path.join(args.save_dir, 'input'), exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'reconstructed'), exist_ok=True)
         
     if args.phase == 'train':

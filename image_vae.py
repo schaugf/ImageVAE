@@ -24,11 +24,12 @@ class ImageVAE():
         """
 
         self.data_dir       = args.data_dir
-        self.save_dir       = args.save_dir
-        
+        self.save_dir       = args.save_dir    
         self.image_size     = args.image_size
         self.image_channel  = args.image_channel
         self.image_res      = args.image_res
+        self.use_vaecb		= args.use_vaecb
+        self.use_clr		= args.use_clr
         
         self.latent_dim     = args.latent_dim
         self.inter_dim      = args.inter_dim
@@ -80,11 +81,12 @@ class ImageVAE():
         x = Input(shape=input_dim)
         
         conv_1 = Conv2D(self.image_channel,
-                        kernel_size=self.num_conv,
-                        padding='same', activation='relu')(x)
+                        kernel_size=2,
+                        padding='same', activation='relu',
+                        strides=1)(x)
         
         conv_2 = Conv2D(self.nfilters,
-                        kernel_size=self.num_conv,
+                        kernel_size=2,
                         padding='same', activation='relu',
                         strides=2)(conv_1)
         
@@ -141,15 +143,16 @@ class ImageVAE():
                                            activation='relu')
         
         decoder_deconv_3_upsamp = Conv2DTranspose(self.nfilters,
-                                                  kernel_size = self.num_conv,
+                                                  kernel_size = 3,
                                                   strides = 2,
                                                   padding = 'valid',
                                                   activation = 'relu')
         
         decoder_mean_squash = Conv2D(self.image_channel,
-                                     kernel_size = self.num_conv - 1,
+                                     kernel_size = 2,
                                      padding = 'valid',
-                                     activation = 'sigmoid')
+                                     activation = 'sigmoid',
+                                     strides = 1)
         
         hid_decoded             = decoder_hid(z)
         up_decoded              = decoder_upsample(hid_decoded)
@@ -234,30 +237,36 @@ class ImageVAE():
                 
         # instantiate callbacks
         
+        callbacks = []
+
         term_nan = TerminateOnNaN()
-        
+        callbacks.append(term_nan)
+
         csv_logger = CSVLogger(os.path.join(self.save_dir, 'training.log'), 
                                separator='\t')
+        callbacks.append(csv_logger)
         
-        checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 
-                                                    'checkpoints/vae_weights.hdf5'),
+        checkpointer = ModelCheckpoint(os.path.join(self.save_dir, 'checkpoints/vae_weights.hdf5'),
                                        verbose=1, 
                                        save_best_only=True,
                                        save_weights_only=True)
+        callbacks.append(checkpointer)
+
+
+        if self.use_clr:
+            clr = CyclicLR(base_lr=0.001, max_lr=0.006,
+                           step_size=2000., mode='triangular')
+            callbacks.append(clr)
         
-        clr = CyclicLR(base_lr=0.001, max_lr=0.006,
-                       step_size=2000., mode='triangular')
-               
-        vaecb = VAEcallback(self)
+        if self.use_vaecb:
+            vaecb = VAEcallback(self)
+            callbacks.append(vaecb)
         
+
         self.history = self.vae.fit_generator(train_generator,
                                epochs = self.epochs,
                                verbose = self.verbose,
-                               callbacks = [term_nan,
-                                            csv_logger,
-                                            checkpointer,
-                                            clr],
-                                            #,vaecb],
+                               callbacks = callbacks,
                                steps_per_epoch = self.steps_per_epoch)                               
 
         self.encode()
