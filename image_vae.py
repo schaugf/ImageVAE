@@ -7,7 +7,7 @@ from keras import metrics
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
-from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint
+from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, EarlyStopping
 
 from clr_callback import CyclicLR
 from vae_callback import VAEcallback
@@ -81,7 +81,7 @@ class ImageVAE():
         x = Input(shape=input_dim)
         
         conv_1 = Conv2D(self.image_channel,
-                        kernel_size=2,
+                        kernel_size=self.image_channel,
                         padding='same', activation='relu',
                         strides=1)(x)
         
@@ -123,7 +123,7 @@ class ImageVAE():
         decoder_hid = Dense(self.inter_dim, 
                             activation='relu')
         
-        decoder_upsample = Dense(self.nfilters * 
+        decoder_upsample = Dense(self.nfilters *
                                  self.image_size//2 * 
                                  self.image_size//2, 
                                  activation='relu')
@@ -149,7 +149,7 @@ class ImageVAE():
                                                   activation = 'relu')
         
         decoder_mean_squash = Conv2D(self.image_channel,
-                                     kernel_size = 2,
+                                     kernel_size = 2, #self.image_channel
                                      padding = 'valid',
                                      activation = 'sigmoid',
                                      strides = 1)
@@ -184,8 +184,8 @@ class ImageVAE():
         def vae_loss(x, x_decoded_mean_squash):
             xent_loss = self.image_size * self.image_size * metrics.binary_crossentropy(K.flatten(x),
                                                                                         K.flatten(x_decoded_mean_squash))
-            kl_loss = - 0.5 * K.sum(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-            vae_loss = K.mean(xent_loss + kl_loss)
+            kl_loss = -0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+            vae_loss = xent_loss + kl_loss
             return vae_loss
         
         
@@ -225,16 +225,14 @@ class ImageVAE():
         else:
           # expecting data saved as numpy array
             train_generator = NumpyDataGenerator(self.data_dir,
-                                           self.batch_size,
-                                           self.image_size,
-                                           self.image_channel,
-                                           self.image_res,
+                                           batch_size = self.batch_size,
+                                           image_size = self.image_size,
+                                           image_channel = self.image_channel,
+                                           image_res = self.image_res,
                                            #self.channels_to_use,
                                            #self.channel_first,
                                            shuffle=False)
        
-        # for higher number of channels
-                
         # instantiate callbacks
         
         callbacks = []
@@ -252,6 +250,9 @@ class ImageVAE():
                                        save_weights_only=True)
         callbacks.append(checkpointer)
 
+        earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=2)
+        callbacks.append(earlystop)
+
 
         if self.use_clr:
             clr = CyclicLR(base_lr=0.001, max_lr=0.006,
@@ -264,15 +265,19 @@ class ImageVAE():
         
 
         self.history = self.vae.fit_generator(train_generator,
-                               epochs = self.epochs,
-                               verbose = self.verbose,
-                               callbacks = callbacks,
-                               steps_per_epoch = self.steps_per_epoch)                               
+                                              epochs = self.epochs,
+                                              verbose = self.verbose,
+                                              callbacks = callbacks,
+                                              steps_per_epoch = self.steps_per_epoch,
+                                              validation_data = train_generator)                               
 
         self.encode()
+
+        # run umap/tsne on encoded data (return encoded from self.encode()
         
         print('done!')
-    
+   
+
     def encode(self):
         """ encode data with trained model
         """
@@ -300,10 +305,10 @@ class ImageVAE():
         else:
           # expecting data saved as numpy array
             test_generator = NumpyDataGenerator(self.data_dir,
-                                           self.batch_size,
-                                           self.image_size,
-                                           self.image_channel,
-                                           self.image_res,
+                                           batch_size = 1,
+                                           image_size = self.image_size,
+                                           image_channel = self.image_channel,
+                                           image_res = self.image_res,
                                            #self.channels_to_use,
                                            #self.channel_first,
                                            shuffle=False)
