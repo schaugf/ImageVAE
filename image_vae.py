@@ -28,8 +28,10 @@ class ImageVAE():
         self.image_size     = args.image_size
         self.nchannel       = args.nchannel
         self.image_res      = args.image_res
+        
         self.use_vaecb      = args.use_vaecb
         self.use_clr        = args.use_clr
+        self.earlystop 		= args.earlystop
         
         self.latent_dim     = args.latent_dim
         self.inter_dim      = args.inter_dim
@@ -162,7 +164,7 @@ class ImageVAE():
                                   activation='sigmoid',
                                   padding='same',
                                   name='decoder_output')(x)
-        
+
         
 #        #   decoder architecture
 #
@@ -240,43 +242,23 @@ class ImageVAE():
         self.vae = Model(inputs, outputs, name='vae')
 
 
-#        self.vae        = Model(x, x_decoded_mean_squash)
-#        self.encoder    = Model(x, z_mean)
-#        self.decoder    = Model(decoder_input, _x_decoded_mean_squash)
-        
-        #   VAE loss terms w/ KL divergence
-#            
-#        def vae_loss(x, x_decoded_mean_squash):
-#            xent_loss = self.image_size * self.image_size * metrics.binary_crossentropy(K.flatten(x),
-#                                                                                        K.flatten(x_decoded_mean_squash))
-#            kl_loss = -0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-#            vae_loss = xent_loss + kl_loss
-#            return vae_loss
-        
-        
-        reconstruction_loss = metrics.binary_crossentropy(K.flatten(inputs),
-                                                          K.flatten(outputs))
-        reconstruction_loss *= self.image_size * self.image_size
-        kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
-        kl_loss = K.sum(kl_loss, axis=-1)
-        kl_loss *= -0.5
+        #   VAE loss terms w/ KL divergence            
+        def vae_loss(inputs, outputs):
+            xent_loss = metrics.binary_crossentropy(K.flatten(inputs), K.flatten(outputs))
+            xent_loss *= self.image_size * self.image_size
+            kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+            kl_loss = K.sum(kl_loss, axis=-1)
+            kl_loss *= -0.5
+            vae_loss = K.mean(xent_loss + kl_loss)
+            return vae_loss
 
-        vae_loss = K.mean(reconstruction_loss + kl_loss)
-        self.vae.add_loss(vae_loss)
-        
+       
         adam = optimizers.adam(lr = self.learn_rate)    
-        self.vae.compile(optimizer=adam)
 
+        self.vae.compile(loss=vae_loss, optimizer=adam)
         self.vae.summary()
     
         
-        #self.vae.compile(optimizer = adam,
-        #                 loss = vae_loss)
-        
-       # self.vae.summary()
-    
-            
-    
     def train(self):
         """ train VAE model
         """
@@ -332,9 +314,9 @@ class ImageVAE():
                                        save_weights_only=True)
         callbacks.append(checkpointer)
 
-        earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=2)
-        callbacks.append(earlystop)
-
+        if self.earlystop:
+            earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=8)
+            callbacks.append(earlystop)
 
         if self.use_clr:
             clr = CyclicLR(base_lr=0.001, max_lr=0.006,
@@ -345,27 +327,11 @@ class ImageVAE():
             vaecb = VAEcallback(self)
             callbacks.append(vaecb)
         
-        import numpy as np
-        from PIL import Image
-        ld = os.path.join(self.data_dir, 'train')
-        x_train = np.array([np.array(Image.open(os.path.join(ld, fname))) for fname in os.listdir(ld)])
 
-
-        #x_train = np.array([np.load(os.path.join(data_dir, i)) for i in os.listdir(data_dir)])
-        x_train = x_train.astype('float32') / 255
-
-        
-        self.history = self.vae.fit(x_train,
-                                    epochs=self.epochs,
-                                    batch_size=self.batch_size)
-        
-        
-        #self.history = self.vae.fit_generator(train_generator,
-        #                                      epochs = self.epochs,
-        #                                      verbose = self.verbose,
-                                              #callbacks = callbacks,
-        #                                      steps_per_epoch = self.steps_per_epoch)
-#                                              # validation_data = train_generator)                               
+        self.history = self.vae.fit_generator(train_generator,
+                                              epochs = self.epochs,
+                                              callbacks = callbacks)
+                                              # validation_data = train_generator)                               
 
         self.encode()
 
@@ -420,8 +386,26 @@ class ImageVAE():
         encoded = self.encoder.predict_generator(test_generator,
                                                  steps = self.data_size)
         
+#        encoded = encoded[0,:]
+        #print(encoded[1])
+        
+        outFile = open(os.path.join(self.save_dir, 'z_mean.csv'), 'w')
+        with outFile:
+            writer = csv.writer(outFile)
+            writer.writerows(encoded[0])
+        
+        outFile = open(os.path.join(self.save_dir, 'z_log_var.csv'), 'w')
+        with outFile:
+            writer = csv.writer(outFile)
+            writer.writerows(encoded[1])
+
         outFile = open(os.path.join(self.save_dir, 'encodings.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
-            writer.writerows(encoded)
-        
+            writer.writerows(encoded[2])
+
+
+
+
+
+

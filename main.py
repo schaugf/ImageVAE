@@ -14,8 +14,10 @@ parser.add_argument('--data_dir',       type=str,   default='data',     help='in
 parser.add_argument('--save_dir',       type=str,   default='save',     help='save directory')
 parser.add_argument('--phase',          type=str,   default='train',    help='train or load')
 parser.add_argument('--checkpoint',     type=str,   default='NA',       help='checkpoint weight file')
+
 parser.add_argument('--use_vaecb',      type=int,   default=1,          help='use VAE callback? 1=yes, 0=no')
 parser.add_argument('--use_clr',        type=int,   default=1,          help='use cyclic learning rate? 1=yes, 0=no')
+parser.add_argument('--earlystop',		type=int,	default=1,			help='use early stopping? 1=yes, 0=no')
 
 parser.add_argument('--image_size',     type=int,   default=64,         help='image size')
 parser.add_argument('--nchannel',      type=int,   default=3,          help='image channels')
@@ -45,8 +47,10 @@ def main():
 
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'checkpoints'), exist_ok=True)
-    os.makedirs(os.path.join(args.save_dir, 'latent_walk'), exist_ok=True)
-    os.makedirs(os.path.join(args.save_dir, 'reconstructed'), exist_ok=True)
+
+    if args.use_vaecb:
+        os.makedirs(os.path.join(args.save_dir, 'latent_walk'), exist_ok=True)
+        os.makedirs(os.path.join(args.save_dir, 'reconstructed'), exist_ok=True)
         
     if args.phase == 'train':
         model = ImageVAE(args)
