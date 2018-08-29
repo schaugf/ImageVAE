@@ -11,14 +11,14 @@ class NumpyDataGenerator(keras.utils.Sequence):
     """ data generator to handle .npy data objects 
     """
     
-    def __init__(self, data_dir, batch_size, image_size, image_channel,
+    def __init__(self, data_dir, batch_size, image_size, nchannel,
                  image_res, 
                  #channels_to_use, channel_first, 
                  shuffle):
         self.image_size = image_size
         self.batch_size = batch_size
         self.list_IDs = glob.glob(os.path.join(data_dir, 'train', '*'))
-        self.image_channel = image_channel
+        self.image_channel = nchannel
         self.image_res = image_res
         self.shuffle = shuffle
         self.on_epoch_end()

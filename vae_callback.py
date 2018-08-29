@@ -31,7 +31,7 @@ class VAEcallback(Callback):
         self.batch_size     = model.batch_size
         self.image_size     = model.image_size
         self.num_save       = model.num_save
-        self.image_channel  = model.image_channel
+        self.nchannel       = model.nchannel
         self.image_res      = model.image_res
         self.data_dir       = model.data_dir
         self.save_dir       = model.save_dir
@@ -44,12 +44,12 @@ class VAEcallback(Callback):
         """
         input_figure = np.zeros((self.image_size * self.num_save, 
                          self.image_size * self.num_save, 
-                         self.image_channel))
+                         self.nchannel))
         
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-        if self.image_channel == 1:
+        if self.nchannel == 1:
             input_images = input_images[..., None]  # add extra index dimension
 
         idx = 0
@@ -69,13 +69,13 @@ class VAEcallback(Callback):
         
         recon_figure = np.zeros((self.image_size * self.num_save,
                                  self.image_size * self.num_save,
-                                 self.image_channel))
+                                 self.nchannel))
         
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
         input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
         scaled_input = input_images / float((2**self.image_res - 1))
-        if self.image_channel == 1:
+        if self.nchannel == 1:
             scaled_input = scaled_input[..., None]
        
         recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
@@ -99,7 +99,7 @@ class VAEcallback(Callback):
         """ latent space walking
         """
         
-        figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.image_channel))
+        figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.nchannel))
         grid_x = norm.ppf(np.linspace(0.05, 0.95, self.latent_samp))
         
         for i in range(self.latent_dim):
@@ -111,7 +111,7 @@ class VAEcallback(Callback):
                 x_decoded = self.decoder.predict(z_sample, batch_size=self.batch_size)
                 x_decoded = x_decoded * float((2**self.image_res - 1))
                 
-                sample = x_decoded[0].reshape(self.image_size, self.image_size, self.image_channel)
+                sample = x_decoded[0].reshape(self.image_size, self.image_size, self.nchannel)
                 
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample

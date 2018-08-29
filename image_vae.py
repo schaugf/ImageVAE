@@ -26,14 +26,14 @@ class ImageVAE():
         self.data_dir       = args.data_dir
         self.save_dir       = args.save_dir    
         self.image_size     = args.image_size
-        self.image_channel  = args.image_channel
+        self.nchannel       = args.nchannel
         self.image_res      = args.image_res
-        self.use_vaecb		= args.use_vaecb
-        self.use_clr		= args.use_clr
+        self.use_vaecb      = args.use_vaecb
+        self.use_clr        = args.use_clr
         
         self.latent_dim     = args.latent_dim
         self.inter_dim      = args.inter_dim
-        self.num_conv       = args.num_conv
+        self.kernel_size    = args.kernel_size
         self.batch_size     = args.batch_size
         self.epochs         = args.epochs
         self.nfilters       = args.nfilters
@@ -67,134 +67,214 @@ class ImageVAE():
                                   mean=0,
                                   stddev=self.epsilon_std)
     
-        return z_mean + K.exp(z_log_var) * epsilon
-    
+        return z_mean + K.exp(0.5 * z_log_var) * epsilon
+
     
     def build_model(self):
         """ build VAE model
         """
         
-        input_dim = (self.image_size, self.image_size, self.image_channel)
+        input_shape = (self.image_size, self.image_size, self.nchannel)
         
         #   encoder architecture
         
-        x = Input(shape=input_dim)
+#        x = Input(shape=input_dim, name='encoder input')
+#        
+#        conv_1 = Conv2D(self.image_channel,
+#                        kernel_size=self.image_channel,
+#                        padding='same', activation='relu',
+#                        strides=1)(x)
+#        
+#        conv_2 = Conv2D(self.nfilters,
+#                        kernel_size=2,
+#                        padding='same', activation='relu',
+#                        strides=2)(conv_1)
+#        
+#        conv_3 = Conv2D(self.nfilters,
+#                        kernel_size=self.num_conv,
+#                        padding='same', activation='relu',
+#                        strides=1)(conv_2)
+#        
+#        conv_4 = Conv2D(self.nfilters,
+#                        kernel_size=self.num_conv,
+#                        padding='same', activation='relu',
+#                        strides=1)(conv_3)
+#        
+#        flat = Flatten()(conv_4)
+#        hidden = Dense(self.inter_dim, activation='relu')(flat)
+#        
+#        #   reparameterization trick
+#        
+#        z_mean      = Dense(self.latent_dim)(hidden)        
+#        z_log_var   = Dense(self.latent_dim)(hidden)
+#        
+#        z           = Lambda(self.sampling)([z_mean, z_log_var])
+#        
+#        
         
-        conv_1 = Conv2D(self.image_channel,
-                        kernel_size=self.image_channel,
-                        padding='same', activation='relu',
-                        strides=1)(x)
+        #   new keras implementation
         
-        conv_2 = Conv2D(self.nfilters,
-                        kernel_size=2,
-                        padding='same', activation='relu',
-                        strides=2)(conv_1)
+        # VAE model = encoder + decoder
+        # build encoder model
+        inputs = Input(shape=input_shape, name='encoder_input')
         
-        conv_3 = Conv2D(self.nfilters,
-                        kernel_size=self.num_conv,
-                        padding='same', activation='relu',
-                        strides=1)(conv_2)
+        x = inputs
+        filters = self.nfilters
+        kernel_size = self.kernel_size
+        for i in range(2):
+            filters *= 2
+            x = Conv2D(filters=filters,
+                       kernel_size=kernel_size,
+                       activation='relu',
+                       strides=2,
+                       padding='same')(x)
         
-        conv_4 = Conv2D(self.nfilters,
-                        kernel_size=self.num_conv,
-                        padding='same', activation='relu',
-                        strides=1)(conv_3)
+        # shape info needed to build decoder model
+        shape = K.int_shape(x)
         
-        flat = Flatten()(conv_4)
-        hidden = Dense(self.inter_dim, activation='relu')(flat)
+        # generate latent vector Q(z|X)
+        x = Flatten()(x)
+        x = Dense(16, activation='relu')(x)
+        z_mean = Dense(self.latent_dim, name='z_mean')(x)
+        z_log_var = Dense(self.latent_dim, name='z_log_var')(x)
         
-        #   reparameterization trick
-        
-        z_mean      = Dense(self.latent_dim)(hidden)        
-        z_log_var   = Dense(self.latent_dim)(hidden)
-        
-        z           = Lambda(self.sampling)([z_mean, z_log_var])
-        
-        
-        #   decoder architecture
+        # use reparameterization trick to push the sampling out as input
+        # note that "output_shape" isn't necessary with the TensorFlow backend
+        z = Lambda(self.sampling, output_shape=(self.latent_dim,), name='z')([z_mean, z_log_var])
 
-        output_dim = (self.batch_size, 
-                      self.image_size//2,
-                      self.image_size//2,
-                      self.nfilters)
         
-        #   instantiate rather than pass through for later resuse
+        # build decoder model
+        latent_inputs = Input(shape=(self.latent_dim,), name='z_sampling')
+        x = Dense(shape[1] * shape[2] * shape[3], activation='relu')(latent_inputs)
+        x = Reshape((shape[1], shape[2], shape[3]))(x)
         
-        decoder_hid = Dense(self.inter_dim, 
-                            activation='relu')
+        for i in range(2):
+            x = Conv2DTranspose(filters=filters,
+                                kernel_size=kernel_size,
+                                activation='relu',
+                                strides=2,
+                                padding='same')(x)
+            filters //= 2
         
-        decoder_upsample = Dense(self.nfilters *
-                                 self.image_size//2 * 
-                                 self.image_size//2, 
-                                 activation='relu')
+        
+        outputs = Conv2DTranspose(filters=input_shape[2],
+                                  kernel_size=kernel_size,
+                                  activation='sigmoid',
+                                  padding='same',
+                                  name='decoder_output')(x)
+        
+        
+#        #   decoder architecture
+#
+#        output_dim = (self.batch_size, 
+#                      self.image_size//2,
+#                      self.image_size//2,
+#                      self.nfilters)
+#        
+#        #   instantiate rather than pass through for later resuse
+#        
+#        decoder_hid = Dense(self.inter_dim, 
+#                            activation='relu')
+#        
+#        decoder_upsample = Dense(self.nfilters *
+#                                 self.image_size//2 * 
+#                                 self.image_size//2, 
+#                                 activation='relu')
+#
+#        decoder_reshape = Reshape(output_dim[1:])
+#        
+#        decoder_deconv_1 = Conv2DTranspose(self.nfilters,
+#                                           kernel_size=self.num_conv,
+#                                           padding='same',
+#                                           strides=1,
+#                                           activation='relu')
+#        
+#        decoder_deconv_2 = Conv2DTranspose(self.nfilters,
+#                                           kernel_size=self.num_conv,
+#                                           padding='same',
+#                                           strides=1,
+#                                           activation='relu')
+#        
+#        decoder_deconv_3_upsamp = Conv2DTranspose(self.nfilters,
+#                                                  kernel_size = 3,
+#                                                  strides = 2,
+#                                                  padding = 'valid',
+#                                                  activation = 'relu')
+#        
+#        decoder_mean_squash = Conv2D(self.nchannel,
+#                                     kernel_size = 2, #self.image_channel
+#                                     padding = 'valid',
+#                                     activation = 'sigmoid',
+#                                     strides = 1)
+        
+#        hid_decoded             = decoder_hid(z)
+#        up_decoded              = decoder_upsample(hid_decoded)
+#        reshape_decoded         = decoder_reshape(up_decoded)
+#        deconv_1_decoded        = decoder_deconv_1(reshape_decoded)
+#        deconv_2_decoded        = decoder_deconv_2(deconv_1_decoded)
+#        x_decoded_relu          = decoder_deconv_3_upsamp(deconv_2_decoded)
+#        x_decoded_mean_squash   = decoder_mean_squash(x_decoded_relu)
+#
+#        #   need to keep generator model separate so new inputs can be used
+#        
+#        decoder_input           = Input(shape=(self.latent_dim,))
+#        _hid_decoded            = decoder_hid(decoder_input)
+#        _up_decoded             = decoder_upsample(_hid_decoded)
+#        _reshape_decoded        = decoder_reshape(_up_decoded)
+#        _deconv_1_decoded       = decoder_deconv_1(_reshape_decoded)
+#        _deconv_2_decoded       = decoder_deconv_2(_deconv_1_decoded)
+#        _x_decoded_relu         = decoder_deconv_3_upsamp(_deconv_2_decoded)
+#        _x_decoded_mean_squash  = decoder_mean_squash(_x_decoded_relu)
+#        
 
-        decoder_reshape = Reshape(output_dim[1:])
+        # instantiate encoder model
+        self.encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
+        self.encoder.summary()
         
-        decoder_deconv_1 = Conv2DTranspose(self.nfilters,
-                                           kernel_size=self.num_conv,
-                                           padding='same',
-                                           strides=1,
-                                           activation='relu')
-        
-        decoder_deconv_2 = Conv2DTranspose(self.nfilters,
-                                           kernel_size=self.num_conv,
-                                           padding='same',
-                                           strides=1,
-                                           activation='relu')
-        
-        decoder_deconv_3_upsamp = Conv2DTranspose(self.nfilters,
-                                                  kernel_size = 3,
-                                                  strides = 2,
-                                                  padding = 'valid',
-                                                  activation = 'relu')
-        
-        decoder_mean_squash = Conv2D(self.image_channel,
-                                     kernel_size = 2, #self.image_channel
-                                     padding = 'valid',
-                                     activation = 'sigmoid',
-                                     strides = 1)
-        
-        hid_decoded             = decoder_hid(z)
-        up_decoded              = decoder_upsample(hid_decoded)
-        reshape_decoded         = decoder_reshape(up_decoded)
-        deconv_1_decoded        = decoder_deconv_1(reshape_decoded)
-        deconv_2_decoded        = decoder_deconv_2(deconv_1_decoded)
-        x_decoded_relu          = decoder_deconv_3_upsamp(deconv_2_decoded)
-        x_decoded_mean_squash   = decoder_mean_squash(x_decoded_relu)
+        # instantiate decoder model
+        self.decoder = Model(latent_inputs, outputs, name='decoder')
+        self.decoder.summary()
+  
+        # instantiate VAE model
+        outputs = self.decoder(self.encoder(inputs)[2])
+        self.vae = Model(inputs, outputs, name='vae')
 
-        #   need to keep generator model separate so new inputs can be used
-        
-        decoder_input           = Input(shape=(self.latent_dim,))
-        _hid_decoded            = decoder_hid(decoder_input)
-        _up_decoded             = decoder_upsample(_hid_decoded)
-        _reshape_decoded        = decoder_reshape(_up_decoded)
-        _deconv_1_decoded       = decoder_deconv_1(_reshape_decoded)
-        _deconv_2_decoded       = decoder_deconv_2(_deconv_1_decoded)
-        _x_decoded_relu         = decoder_deconv_3_upsamp(_deconv_2_decoded)
-        _x_decoded_mean_squash  = decoder_mean_squash(_x_decoded_relu)
-        
-        #   instantiate VAE models
-        
-        self.vae        = Model(x, x_decoded_mean_squash)
-        self.encoder    = Model(x, z_mean)
-        self.decoder    = Model(decoder_input, _x_decoded_mean_squash)
+
+#        self.vae        = Model(x, x_decoded_mean_squash)
+#        self.encoder    = Model(x, z_mean)
+#        self.decoder    = Model(decoder_input, _x_decoded_mean_squash)
         
         #   VAE loss terms w/ KL divergence
-            
-        def vae_loss(x, x_decoded_mean_squash):
-            xent_loss = self.image_size * self.image_size * metrics.binary_crossentropy(K.flatten(x),
-                                                                                        K.flatten(x_decoded_mean_squash))
-            kl_loss = -0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
-            vae_loss = xent_loss + kl_loss
-            return vae_loss
+#            
+#        def vae_loss(x, x_decoded_mean_squash):
+#            xent_loss = self.image_size * self.image_size * metrics.binary_crossentropy(K.flatten(x),
+#                                                                                        K.flatten(x_decoded_mean_squash))
+#            kl_loss = -0.5 * K.mean(1 + z_log_var - K.square(z_mean) - K.exp(z_log_var), axis=-1)
+#            vae_loss = xent_loss + kl_loss
+#            return vae_loss
         
         
-        adam = optimizers.adam(lr = self.learn_rate)
+        reconstruction_loss = metrics.binary_crossentropy(K.flatten(inputs),
+                                                          K.flatten(outputs))
+        reconstruction_loss *= self.image_size * self.image_size
+        kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+        kl_loss = K.sum(kl_loss, axis=-1)
+        kl_loss *= -0.5
+
+        vae_loss = K.mean(reconstruction_loss + kl_loss)
+        self.vae.add_loss(vae_loss)
         
-        self.vae.compile(optimizer = adam,
-                         loss = vae_loss)
-        
+        adam = optimizers.adam(lr = self.learn_rate)    
+        self.vae.compile(optimizer=adam)
+
         self.vae.summary()
+    
+        
+        #self.vae.compile(optimizer = adam,
+        #                 loss = vae_loss)
+        
+       # self.vae.summary()
+    
             
     
     def train(self):
@@ -204,9 +284,10 @@ class ImageVAE():
         train_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1),
                                            horizontal_flip = True,
                                            vertical_flip = True)
+        
 
         # colormode needs to be set depending on num_channels
-        if self.image_channel == 1:
+        if self.nchannel == 1:
            train_generator = train_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
@@ -214,8 +295,9 @@ class ImageVAE():
                 color_mode = 'grayscale',
                 class_mode = 'input')
        
-        elif self.image_channel == 3:
-           train_generator = train_datagen.flow_from_directory(
+        elif self.nchannel == 3:
+            print('using three channel generator!')
+            train_generator = train_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
                 batch_size = self.batch_size,
@@ -227,7 +309,7 @@ class ImageVAE():
             train_generator = NumpyDataGenerator(self.data_dir,
                                            batch_size = self.batch_size,
                                            image_size = self.image_size,
-                                           image_channel = self.image_channel,
+                                           nchannel = self.nchannel,
                                            image_res = self.image_res,
                                            #self.channels_to_use,
                                            #self.channel_first,
@@ -263,13 +345,27 @@ class ImageVAE():
             vaecb = VAEcallback(self)
             callbacks.append(vaecb)
         
+        import numpy as np
+        from PIL import Image
+        ld = os.path.join(self.data_dir, 'train')
+        x_train = np.array([np.array(Image.open(os.path.join(ld, fname))) for fname in os.listdir(ld)])
 
-        self.history = self.vae.fit_generator(train_generator,
-                                              epochs = self.epochs,
-                                              verbose = self.verbose,
-                                              callbacks = callbacks,
-                                              steps_per_epoch = self.steps_per_epoch,
-                                              validation_data = train_generator)                               
+
+        #x_train = np.array([np.load(os.path.join(data_dir, i)) for i in os.listdir(data_dir)])
+        x_train = x_train.astype('float32') / 255
+
+        
+        self.history = self.vae.fit(x_train,
+                                    epochs=self.epochs,
+                                    batch_size=self.batch_size)
+        
+        
+        #self.history = self.vae.fit_generator(train_generator,
+        #                                      epochs = self.epochs,
+        #                                      verbose = self.verbose,
+                                              #callbacks = callbacks,
+        #                                      steps_per_epoch = self.steps_per_epoch)
+#                                              # validation_data = train_generator)                               
 
         self.encode()
 
@@ -284,7 +380,7 @@ class ImageVAE():
         
         test_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1))
         
-        if self.image_channel == 1:
+        if self.nchannel == 1:
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
@@ -293,7 +389,7 @@ class ImageVAE():
                 shuffle = False,
                 class_mode = 'input')
             
-        elif self.image_channel == 3:
+        elif self.nchannel == 3:
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
@@ -307,7 +403,7 @@ class ImageVAE():
             test_generator = NumpyDataGenerator(self.data_dir,
                                            batch_size = 1,
                                            image_size = self.image_size,
-                                           image_channel = self.image_channel,
+                                           image_channel = self.nchannel,
                                            image_res = self.image_res,
                                            #self.channels_to_use,
                                            #self.channel_first,
