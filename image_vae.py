@@ -1,5 +1,7 @@
 import os
 import csv
+import umap
+from sklearn.manifold import TSNE
 
 from keras.layers import Input, Conv2D, Flatten, Dense, Reshape, Lambda, Conv2DTranspose
 from keras import optimizers
@@ -369,7 +371,7 @@ class ImageVAE():
             test_generator = NumpyDataGenerator(self.data_dir,
                                            batch_size = 1,
                                            image_size = self.image_size,
-                                           image_channel = self.nchannel,
+                                           nchannel = self.nchannel,
                                            image_res = self.image_res,
                                            #self.channels_to_use,
                                            #self.channel_first,
@@ -386,9 +388,6 @@ class ImageVAE():
         encoded = self.encoder.predict_generator(test_generator,
                                                  steps = self.data_size)
         
-#        encoded = encoded[0,:]
-        #print(encoded[1])
-        
         outFile = open(os.path.join(self.save_dir, 'z_mean.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
@@ -404,6 +403,24 @@ class ImageVAE():
             writer = csv.writer(outFile)
             writer.writerows(encoded[2])
 
+        # dimensionality reduction and save
+		
+        print('learning umap...')
+        umap_embed = umap.UMAP().fit_transform(encoded[2])
+        outFile = open(os.path.join(self.save_dir, 'umap_embedding.csv'), 'w')
+        with outFile:
+            writer = csv.writer(outFile)
+            writer.writerows(umap_embed)
+
+        print('learning tsne...')
+        tsne_embed = TSNE(n_components=2).fit_transform(encoded[2])
+        outFile = open(os.path.join(self.save_dir, 'tsne_embedding.csv'), 'w')
+        with outFile:
+            writer = csv.writer(outFile)
+            writer.writerows(tsne_embed)
+
+        print('generating plots with R...')
+        os.system('Rscript make_plots.R -d ' + self.save_dir) 
 
 
 
