@@ -44,11 +44,17 @@ class VAEcallback(Callback):
         """
         input_figure = np.zeros((self.image_size * self.num_save, 
                          self.image_size * self.num_save, 
-                         self.nchannel))
+                         min(3, self.nchannel))) 
         
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
-        input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
+        
+        if self.nchannel > 3:
+            input_images = np.array([np.load(fname) for fname in to_load])
+            input_images = input_images[:,:,:,0:3]
+        else:
+            input_images = np.array([np.array(Image.open(fname)) for fname in to_load])  # needs to generalize
+        
         if self.nchannel == 1:
             input_images = input_images[..., None]  # add extra index dimension
 
@@ -69,12 +75,18 @@ class VAEcallback(Callback):
         
         recon_figure = np.zeros((self.image_size * self.num_save,
                                  self.image_size * self.num_save,
-                                 self.nchannel))
+                                 min(3, self.nchannel)))
         
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
-        input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
+        if self.nchannel > 3:
+            input_images = np.array([np.load(fname) for fname in to_load])
+            #input_images = input_images[:,:,:,0:3]
+        else:
+            input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
+
         scaled_input = input_images / float((2**self.image_res - 1))
+        
         if self.nchannel == 1:
             scaled_input = scaled_input[..., None]
        
@@ -86,7 +98,7 @@ class VAEcallback(Callback):
         for i in range(self.num_save):
             for j in range(self.num_save):
                 recon_figure[i * self.image_size : (i+1) * self.image_size,
-                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,:]
+                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,0:3]
                 idx += 1
 
         imageio.imwrite(os.path.join(self.save_dir, 
@@ -99,7 +111,7 @@ class VAEcallback(Callback):
         """ latent space walking
         """
         
-        figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, self.nchannel))
+        figure = np.zeros((self.image_size * self.latent_dim, self.image_size * self.latent_samp, min(3, self.nchannel)))
         grid_x = norm.ppf(np.linspace(0.05, 0.95, self.latent_samp))
         
         for i in range(self.latent_dim):
@@ -112,6 +124,8 @@ class VAEcallback(Callback):
                 x_decoded = x_decoded * float((2**self.image_res - 1))
                 
                 sample = x_decoded[0].reshape(self.image_size, self.image_size, self.nchannel)
+                if self.nchannel > 3:
+                    sample = sample[:,:,0:3]
                 
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample
