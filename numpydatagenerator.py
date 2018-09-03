@@ -50,7 +50,7 @@ class NumpyDataGenerator(keras.utils.Sequence):
 
     def __data_generation(self, list_IDs_temp):
         # Initialization
-        X = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel), dtype=np.float32)
+        X = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel), dtype=np.float16)
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
             # Store sample
@@ -63,3 +63,6 @@ class NumpyDataGenerator(keras.utils.Sequence):
             temp = temp[:, :, channels]
             X[i,] = temp
             return X
+
+
+
