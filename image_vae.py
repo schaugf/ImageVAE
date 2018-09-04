@@ -82,43 +82,6 @@ class ImageVAE():
         
         #   encoder architecture
         
-#        x = Input(shape=input_dim, name='encoder input')
-#        
-#        conv_1 = Conv2D(self.image_channel,
-#                        kernel_size=self.image_channel,
-#                        padding='same', activation='relu',
-#                        strides=1)(x)
-#        
-#        conv_2 = Conv2D(self.nfilters,
-#                        kernel_size=2,
-#                        padding='same', activation='relu',
-#                        strides=2)(conv_1)
-#        
-#        conv_3 = Conv2D(self.nfilters,
-#                        kernel_size=self.num_conv,
-#                        padding='same', activation='relu',
-#                        strides=1)(conv_2)
-#        
-#        conv_4 = Conv2D(self.nfilters,
-#                        kernel_size=self.num_conv,
-#                        padding='same', activation='relu',
-#                        strides=1)(conv_3)
-#        
-#        flat = Flatten()(conv_4)
-#        hidden = Dense(self.inter_dim, activation='relu')(flat)
-#        
-#        #   reparameterization trick
-#        
-#        z_mean      = Dense(self.latent_dim)(hidden)        
-#        z_log_var   = Dense(self.latent_dim)(hidden)
-#        
-#        z           = Lambda(self.sampling)([z_mean, z_log_var])
-#        
-#        
-        
-        #   new keras implementation
-        
-        # VAE model = encoder + decoder
         # build encoder model
         inputs = Input(shape=input_shape, name='encoder_input')
         
@@ -143,7 +106,6 @@ class ImageVAE():
         z_log_var = Dense(self.latent_dim, name='z_log_var')(x)
         
         # use reparameterization trick to push the sampling out as input
-        # note that "output_shape" isn't necessary with the TensorFlow backend
         z = Lambda(self.sampling, output_shape=(self.latent_dim,), name='z')([z_mean, z_log_var])
 
         
@@ -168,69 +130,6 @@ class ImageVAE():
                                   name='decoder_output')(x)
 
         
-#        #   decoder architecture
-#
-#        output_dim = (self.batch_size, 
-#                      self.image_size//2,
-#                      self.image_size//2,
-#                      self.nfilters)
-#        
-#        #   instantiate rather than pass through for later resuse
-#        
-#        decoder_hid = Dense(self.inter_dim, 
-#                            activation='relu')
-#        
-#        decoder_upsample = Dense(self.nfilters *
-#                                 self.image_size//2 * 
-#                                 self.image_size//2, 
-#                                 activation='relu')
-#
-#        decoder_reshape = Reshape(output_dim[1:])
-#        
-#        decoder_deconv_1 = Conv2DTranspose(self.nfilters,
-#                                           kernel_size=self.num_conv,
-#                                           padding='same',
-#                                           strides=1,
-#                                           activation='relu')
-#        
-#        decoder_deconv_2 = Conv2DTranspose(self.nfilters,
-#                                           kernel_size=self.num_conv,
-#                                           padding='same',
-#                                           strides=1,
-#                                           activation='relu')
-#        
-#        decoder_deconv_3_upsamp = Conv2DTranspose(self.nfilters,
-#                                                  kernel_size = 3,
-#                                                  strides = 2,
-#                                                  padding = 'valid',
-#                                                  activation = 'relu')
-#        
-#        decoder_mean_squash = Conv2D(self.nchannel,
-#                                     kernel_size = 2, #self.image_channel
-#                                     padding = 'valid',
-#                                     activation = 'sigmoid',
-#                                     strides = 1)
-        
-#        hid_decoded             = decoder_hid(z)
-#        up_decoded              = decoder_upsample(hid_decoded)
-#        reshape_decoded         = decoder_reshape(up_decoded)
-#        deconv_1_decoded        = decoder_deconv_1(reshape_decoded)
-#        deconv_2_decoded        = decoder_deconv_2(deconv_1_decoded)
-#        x_decoded_relu          = decoder_deconv_3_upsamp(deconv_2_decoded)
-#        x_decoded_mean_squash   = decoder_mean_squash(x_decoded_relu)
-#
-#        #   need to keep generator model separate so new inputs can be used
-#        
-#        decoder_input           = Input(shape=(self.latent_dim,))
-#        _hid_decoded            = decoder_hid(decoder_input)
-#        _up_decoded             = decoder_upsample(_hid_decoded)
-#        _reshape_decoded        = decoder_reshape(_up_decoded)
-#        _deconv_1_decoded       = decoder_deconv_1(_reshape_decoded)
-#        _deconv_2_decoded       = decoder_deconv_2(_deconv_1_decoded)
-#        _x_decoded_relu         = decoder_deconv_3_upsamp(_deconv_2_decoded)
-#        _x_decoded_mean_squash  = decoder_mean_squash(_x_decoded_relu)
-#        
-
         # instantiate encoder model
         self.encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
         self.encoder.summary()
