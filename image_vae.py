@@ -14,6 +14,7 @@ from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, EarlySto
 from clr_callback import CyclicLR
 from vae_callback import VAEcallback
 from numpydatagenerator import NumpyDataGenerator
+from coordplot import CoordPlot
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE' 
 
@@ -142,7 +143,6 @@ class ImageVAE():
         outputs = self.decoder(self.encoder(inputs)[2])
         self.vae = Model(inputs, outputs, name='vae')
 
-
         #   VAE loss terms w/ KL divergence            
         def vae_loss(inputs, outputs):
             xent_loss = metrics.binary_crossentropy(K.flatten(inputs), K.flatten(outputs))
@@ -153,7 +153,6 @@ class ImageVAE():
             vae_loss = K.mean(xent_loss + kl_loss)
             return vae_loss
 
-       
         adam = optimizers.adam(lr = self.learn_rate)    
 
         self.vae.compile(loss=vae_loss, optimizer=adam)
@@ -198,8 +197,7 @@ class ImageVAE():
                                            #self.channel_first,
                                            shuffle=False)
        
-        # instantiate callbacks
-        
+        # instantiate callbacks       
         callbacks = []
 
         term_nan = TerminateOnNaN()
@@ -216,7 +214,7 @@ class ImageVAE():
         callbacks.append(checkpointer)
 
         if self.earlystop:
-            earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=8)
+            earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=4)
             callbacks.append(earlystop)
 
         if self.use_clr:
@@ -245,6 +243,7 @@ class ImageVAE():
         """ encode data with trained model
         """
         
+        print('encoding training data...')
         test_datagen = ImageDataGenerator(rescale = 1./(2**self.image_res - 1))
         
         if self.nchannel == 1:
@@ -276,17 +275,16 @@ class ImageVAE():
                                            #self.channel_first,
                                            shuffle=False)
        
-        # save generated filenames
-        
+        encoded = self.encoder.predict_generator(test_generator,
+                                                 steps = self.data_size)
+ 
+        # save generated filename
         fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
         with fnFile:
             writer = csv.writer(fnFile)
             writer.writerow(self.file_names)
         
-        print('encoding training data...')
-        encoded = self.encoder.predict_generator(test_generator,
-                                                 steps = self.data_size)
-        
+        # generate and save encodings       
         outFile = open(os.path.join(self.save_dir, 'z_mean.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
@@ -302,22 +300,32 @@ class ImageVAE():
             writer = csv.writer(outFile)
             writer.writerows(encoded[2])
 
+
         # dimensionality reduction and save
-		
         print('learning umap...')
         umap_embed = umap.UMAP().fit_transform(encoded[2])
-        outFile = open(os.path.join(self.save_dir, 'umap_embedding.csv'), 'w')
+        outFile = open(os.path.join(self.save_dir, 'embedding_umap.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
             writer.writerows(umap_embed)
 
         print('learning tsne...')
         tsne_embed = TSNE(n_components=2).fit_transform(encoded[2])
-        outFile = open(os.path.join(self.save_dir, 'tsne_embedding.csv'), 'w')
+        outFile = open(os.path.join(self.save_dir, 'embedding_tsne.csv'), 'w')
         with outFile:
             writer = csv.writer(outFile)
             writer.writerows(tsne_embed)
-
+		
+        # generate coordconv figures
+        CoordPlot(image_dir=os.path.join(self.data_dir, 'train'),
+                  coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
+                  plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
+                 
+        CoordPlot(image_dir=os.path.join(self.data_dir, 'train'),
+                  coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
+                  plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
+ 
+        # external system call for plot generation
         print('generating plots with R...')
         os.system('Rscript make_plots.R -d ' + self.save_dir) 
 
