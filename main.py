@@ -48,10 +48,6 @@ def main():
     os.makedirs(args.save_dir, exist_ok=True)
     os.makedirs(os.path.join(args.save_dir, 'checkpoints'), exist_ok=True)
 
-    if args.use_vaecb:
-        os.makedirs(os.path.join(args.save_dir, 'latent_walk'), exist_ok=True)
-        os.makedirs(os.path.join(args.save_dir, 'reconstructed'), exist_ok=True)
-        
     if args.phase == 'train':
         model = ImageVAE(args)
         model.train()

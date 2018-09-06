@@ -69,7 +69,7 @@ class VAEcallback(Callback):
                         input_figure.astype(np.uint8))
         
     
-    def save_input_reconstruction(self, epoch):
+    def save_input_reconstruction(self, epoch=0, is_final=False):
         """ save grid of both input and reconstructed images side by side
         """
         
@@ -101,10 +101,16 @@ class VAEcallback(Callback):
                              j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,0:3]
                 idx += 1
 
-        imageio.imwrite(os.path.join(self.save_dir, 
-                                     'reconstructed', 
-                                     'recon_images_epoch_{0:03d}.png'.format(epoch)),
-                        recon_figure.astype(np.uint8))
+        if not(is_final):
+            imageio.imwrite(os.path.join(self.save_dir, 
+                                         'reconstructed', 
+                                         'recon_images_epoch_{0:03d}.png'.format(epoch)),
+                                         recon_figure.astype(np.uint8))
+        else:
+            imageio.imwrite(os.path.join(self.save_dir, 
+                                         'recon_images_final.png'),
+                                         recon_figure.astype(np.uint8))
+
     
     
     def latent_walk(self, epoch):
@@ -144,6 +150,7 @@ class VAEcallback(Callback):
 
     
     def on_train_end(self, logs={}):
+        self.save_input_reconstruction(is_final=True)
         print('animating training...')
         os.system('convert -delay 0.1 %s/latent_walk/* %s/latent_walk_animated.gif' % 
                   (self.save_dir, self.save_dir))
