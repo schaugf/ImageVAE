@@ -214,12 +214,14 @@ class ImageVAE():
         callbacks.append(checkpointer)
 
         if self.earlystop:
-            earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=4)
+            earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=2)
             callbacks.append(earlystop)
 
         if self.use_clr:
-            clr = CyclicLR(base_lr=self.learn_rate, max_lr=0.001,
-                           step_size=2000., mode='triangular')
+            clr = CyclicLR(base_lr=self.learn_rate,
+                           max_lr=0.001,
+                           step_size=4*self.steps_per_epoch,
+                           mode='triangular')
             callbacks.append(clr)
         
         if self.use_vaecb:
