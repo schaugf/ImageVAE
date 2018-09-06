@@ -113,7 +113,7 @@ class VAEcallback(Callback):
 
     
     
-    def latent_walk(self, epoch):
+    def latent_walk(self, epoch, is_final=False):
         """ latent space walking
         """
         
@@ -136,8 +136,12 @@ class VAEcallback(Callback):
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample
         
-        imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), 
-                        figure.astype(np.uint8))
+        if not(is_final):
+            imageio.imwrite(os.path.join(self.save_dir, 'latent_walk', 'latent_walk_epoch_{0:03d}.png'.format(epoch)), 
+                            figure.astype(np.uint8))
+        else:
+            imageio.imwrite(os.path.join(self.save_dir, 'latent_walk_final.png'), 
+                            figure.astype(np.uint8))
         
         
     def on_epoch_end(self, epoch, logs={}):
@@ -146,14 +150,20 @@ class VAEcallback(Callback):
 
 
     def on_train_begin(self, logs={}):
+        os.makedirs(os.path.join(self.save_dir, 'latent_walk'), exist_ok=True)
+        os.makedirs(os.path.join(self.save_dir, 'reconstructed'), exist_ok=True)
+        os.makedirs(os.path.join(self.save_dir, 'animated'), exist_ok=True)
         self.save_input_images()
 
     
     def on_train_end(self, logs={}):
         self.save_input_reconstruction(is_final=True)
+        self.latent_walk(is_final=True)
+
         print('animating training...')
-        os.system('convert -delay 0.1 %s/latent_walk/* %s/latent_walk_animated.gif' % 
+        os
+        os.system('convert -delay 0.1 %s/latent_walk/* %s/animated/latent_walk_animated.gif' % 
                   (self.save_dir, self.save_dir))
         
-        os.system('convert -delay 0.1 %s/reconstructed/* %s/reconstructed_animated.gif' % 
+        os.system('convert -delay 0.1 %s/reconstructed/* %s/animated/reconstructed_animated.gif' % 
                   (self.save_dir, self.save_dir))
