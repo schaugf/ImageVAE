@@ -1,7 +1,9 @@
 import os
+import csv
 import random
 import argparse
 import numpy as np
+from tqdm import tqdm
 from PIL import Image
 from skimage.transform import resize
 
@@ -12,7 +14,7 @@ def CoordPlot(image_dir, coord_file, nplot=None, save_w=4000, save_h=3000, tile_
     
     # read data
     coords = np.genfromtxt(coord_file, delimiter=',')
-    filenames = os.listdir(image_dir)
+    filenames = sorted(os.listdir(image_dir))
 
     if nplot==None:
        nplot = len(filenames)
@@ -32,7 +34,7 @@ def CoordPlot(image_dir, coord_file, nplot=None, save_w=4000, save_h=3000, tile_
     ty = coords[:,1]
 
     full_image = Image.new('RGBA', (save_w, save_h), (0,0,0,255))  # black background
-    for fn, x, y in zip(filenames, tx, ty):
+    for fn, x, y in tqdm(zip(filenames, tx, ty)):
         img = Image.open(os.path.join(image_dir, fn)) 	# load raw png image
         npi = np.array(img, np.uint8)					# convert to uint np arrat
         rsz = resize(npi, (tile_size, tile_size),						# resize, which converts to float64
@@ -50,7 +52,7 @@ if __name__ == '__main__':
 		parser = argparse.ArgumentParser(description='scatter images to coordinate pairs')
 		parser.add_argument('--image_dir',  type=str, default=None, help='input image directory of png files')
 		parser.add_argument('--coord_file', type=str, default=None, help='coordinate file, csv')
-		parser.add_argument('--nplot',      type=int, default=100,  help='number of images to plot')
+		parser.add_argument('--nplot',      type=int, default=None,  help='number of images to plot')
 		parser.add_argument('--save_w',     type=int, default=4000, help='width of saved image')
 		parser.add_argument('--save_h',     type=int, default=3000, help='height of saved image')
 		parser.add_argument('--tile_size',  type=int, default=100,  help='size of tile')
