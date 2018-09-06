@@ -113,7 +113,7 @@ class VAEcallback(Callback):
 
     
     
-    def latent_walk(self, epoch, is_final=False):
+    def latent_walk(self, epoch=0, is_final=False):
         """ latent space walking
         """
         
