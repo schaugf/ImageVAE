@@ -220,7 +220,7 @@ class ImageVAE():
             callbacks.append(earlystop)
 
         if self.use_clr:
-            clr = CyclicLR(base_lr=0.001, max_lr=0.006,
+            clr = CyclicLR(base_lr=self.learn_rate, max_lr=0.001,
                            step_size=2000., mode='triangular')
             callbacks.append(clr)
         
@@ -236,8 +236,8 @@ class ImageVAE():
 
         self.encode()
 
-        # run umap/tsne on encoded data (return encoded from self.encode()
-        
+        # call coordplot.py from system call, point to coordinate files and images
+
         print('done!')
    
 
