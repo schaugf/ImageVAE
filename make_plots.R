@@ -33,10 +33,10 @@ cat('loading data files...\n')
 encodings <- data.frame(read.csv(file.path(opt$results_dir, 'encodings.csv'), header=F))
 names(encodings) <- paste0('vae', seq(1:ncol(encodings)))
 
-umap_embedding = data.frame(read.csv(file.path(opt$results_dir, 'umap_embedding.csv'), header=F))
+umap_embedding = data.frame(read.csv(file.path(opt$results_dir, 'embedding_umap.csv'), header=F))
 names(umap_embedding) = c('umap1', 'umap2')
 
-tsne_embedding = data.frame(read.csv(file.path(opt$results_dir, 'tsne_embedding.csv'), header=F))
+tsne_embedding = data.frame(read.csv(file.path(opt$results_dir, 'embedding_tsne.csv'), header=F))
 names(tsne_embedding) = c('tsne1', 'tsne2')
 
 zvar = data.frame(read.csv(file.path(opt$results_dir, 'z_log_var.csv'), header=F))
@@ -61,7 +61,7 @@ sf <- scale_fill_gradientn(colours = myPalette(100), limits=c(-3, 3))
 
 cat('generating plots...\n')
 
-ggplot(training_log) +
+ggplot(training_log[-1,]) + 
 		geom_point(aes(x=epoch, y=log(loss))) +
     geom_line(aes(x=epoch, y=log(loss))) +
 		theme_minimal() +
@@ -75,7 +75,7 @@ ggplot(training_log) +
 ggplot(umap_embedding) +
 		geom_point(aes(x=umap1, y=umap2)) +
 		theme_minimal() +
-		ggsave(file.path(opt$save_dir, 'umap_projection.pdf'),
+		ggsave(file.path(opt$save_dir, 'projection_umap.pdf'),
 			   height=opt$img_height, width=opt$img_width, units='in', device='pdf')
 
 #	plot tsne projection
@@ -83,7 +83,7 @@ ggplot(umap_embedding) +
 ggplot(tsne_embedding) +
 		geom_point(aes(x=tsne1, y=tsne2)) +
 		theme_minimal() +
-		ggsave(file.path(opt$save_dir, 'tsne_projection.pdf'),
+		ggsave(file.path(opt$save_dir, 'projection_tsne.pdf'),
 			   height=opt$img_height, width=opt$img_width, units='in', device='pdf')
 
 # plot encoding densities
@@ -96,10 +96,5 @@ ggplot(pd) +
   theme_minimal() +
   ggsave(file.path(opt$save_dir, 'latent_distribution.pdf'),
          height=opt$img_height, width=opt$img_width, units='in', device='pdf')
-
-cat('done! \n')
-
-
-
 
 
