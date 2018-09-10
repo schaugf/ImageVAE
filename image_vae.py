@@ -156,7 +156,18 @@ class ImageVAE():
         adam = optimizers.adam(lr = self.learn_rate)    
 
         self.vae.compile(loss=vae_loss, optimizer=adam)
-        self.vae.summary()
+        self.vae.summary()       
+        
+        # save model architectures
+        self.model_dir = os.path.join(self.save_dir, 'models')
+        os.makedirs(self.model_dir, exist_ok=True)
+        print('saving model architectures to', self.model_dir)
+        with open(os.path.join(self.model_dir, 'arch_vae.json'), 'w') as file:
+            file.write(self.vae.to_json())    
+        with open(os.path.join(self.model_dir, 'arch_encoder.json'), 'w') as file:
+            file.write(self.encoder.to_json())
+        with open(os.path.join(self.model_dir, 'arch_decoder.json'), 'w') as file:
+            file.write(self.decoder.to_json())
     
         
     def train(self):
@@ -214,7 +225,7 @@ class ImageVAE():
         callbacks.append(checkpointer)
 
         if self.earlystop:
-            earlystop = EarlyStopping(monitor = 'loss', min_delta=0, patience=2)
+            earlystop = EarlyStopping(monitor='loss', min_delta=0, patience=3)
             callbacks.append(earlystop)
 
         if self.use_clr:
@@ -233,6 +244,11 @@ class ImageVAE():
                                               epochs = self.epochs,
                                               callbacks = callbacks)
                                               # validation_data = train_generator)                               
+
+        print('saving model weights to', self.model_dir)
+        self.vae.save_weights(os.path.join(self.model_dir, 'weights_vae.hdf5'))
+        self.encoder.save_weights(os.path.join(self.model_dir, 'weights_encoder.hdf5'))
+        self.decoder.save_weights(os.path.join(self.model_dir, 'weights_decoder.hdf5'))
 
         self.encode()
 
@@ -319,6 +335,7 @@ class ImageVAE():
             writer.writerows(tsne_embed)
 		
         # generate coordconv figures
+        print('generating coordinate plots...')
         CoordPlot(image_dir=os.path.join(self.data_dir, 'train'),
                   coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
