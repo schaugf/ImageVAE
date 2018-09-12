@@ -27,15 +27,14 @@ class ImageVAE():
         """
 
         self.data_dir       = args.data_dir
+        self.image_dir      = args.image_dir
         self.save_dir       = args.save_dir    
         self.image_size     = args.image_size
         self.nchannel       = args.nchannel
         self.image_res      = args.image_res
-        
         self.use_vaecb      = args.use_vaecb
         self.use_clr        = args.use_clr
         self.earlystop 		= args.earlystop
-        
         self.latent_dim     = args.latent_dim
         self.inter_dim      = args.inter_dim
         self.kernel_size    = args.kernel_size
@@ -47,9 +46,7 @@ class ImageVAE():
         self.latent_samp    = args.latent_samp
         self.num_save       = args.num_save
         self.verbose        = args.verbose
-        
         self.phase          = args.phase
-        
         self.steps_per_epoch = args.steps_per_epoch
         
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
@@ -225,7 +222,7 @@ class ImageVAE():
         callbacks.append(checkpointer)
 
         if self.earlystop:
-            earlystop = EarlyStopping(monitor='loss', min_delta=0, patience=3)
+            earlystop = EarlyStopping(monitor='loss', min_delta=0, patience=5)
             callbacks.append(earlystop)
 
         if self.use_clr:
@@ -336,11 +333,11 @@ class ImageVAE():
 		
         # generate coordconv figures
         print('generating coordinate plots...')
-        CoordPlot(image_dir=os.path.join(self.data_dir, 'train'),
+        CoordPlot(image_dir=self.image_dir,
                   coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
                  
-        CoordPlot(image_dir=os.path.join(self.data_dir, 'train'),
+        CoordPlot(image_dir=self.image_dir),
                   coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
                   plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
  
