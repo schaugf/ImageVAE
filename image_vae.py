@@ -45,6 +45,7 @@ class ImageVAE():
         self.epsilon_std    = args.epsilon_std
         self.latent_samp    = args.latent_samp
         self.num_save       = args.num_save
+        self.do_tsne        = args.do_tsne
         self.verbose        = args.verbose
         self.phase          = args.phase
         self.steps_per_epoch = args.steps_per_epoch
@@ -324,26 +325,28 @@ class ImageVAE():
             writer = csv.writer(outFile)
             writer.writerows(umap_embed)
 
-        print('learning tsne...')
-        tsne_embed = TSNE(n_components=2).fit_transform(encoded[2])
-        outFile = open(os.path.join(self.save_dir, 'embedding_tsne.csv'), 'w')
-        with outFile:
-            writer = csv.writer(outFile)
-            writer.writerows(tsne_embed)
-		
         # generate coordconv figures
-        print('generating coordinate plots...')
         CoordPlot(image_dir=self.image_dir,
                   coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
-                 
-        CoordPlot(image_dir=self.image_dir),
-                  coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
-                  plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
+       
  
+        if self.do_tsne:
+            print('learning tsne...')
+            tsne_embed = TSNE(n_components=2).fit_transform(encoded[2])
+            outFile = open(os.path.join(self.save_dir, 'embedding_tsne.csv'), 'w')
+            with outFile:
+                writer = csv.writer(outFile)
+                writer.writerows(tsne_embed)
+            CoordPlot(image_dir=self.image_dir,
+                      coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
+                      plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
+ 
+
         # external system call for plot generation
         print('generating plots with R...')
         os.system('Rscript make_plots.R -d ' + self.save_dir) 
+        print('done!')
 
 
 
