@@ -151,9 +151,11 @@ class ImageVAE():
             vae_loss = K.mean(xent_loss + kl_loss)
             return vae_loss
 
-        adam = optimizers.adam(lr = self.learn_rate)    
+        optimizer = optimizers.rmsprop(lr = self.learn_rate)    
 
-        self.vae.compile(loss=vae_loss, optimizer=adam)
+        self.vae.compile(loss=vae_loss,
+                         optimizer=optimizer)
+
         self.vae.summary()       
         
         # save model architectures
@@ -237,7 +239,6 @@ class ImageVAE():
             vaecb = VAEcallback(self)
             callbacks.append(vaecb)
         
-
         self.history = self.vae.fit_generator(train_generator,
                                               epochs = self.epochs,
                                               callbacks = callbacks)
@@ -249,8 +250,6 @@ class ImageVAE():
         self.decoder.save_weights(os.path.join(self.model_dir, 'weights_decoder.hdf5'))
 
         self.encode()
-
-        # call coordplot.py from system call, point to coordinate files and images
 
         print('done!')
    
@@ -338,6 +337,7 @@ class ImageVAE():
             with outFile:
                 writer = csv.writer(outFile)
                 writer.writerows(tsne_embed)
+
             CoordPlot(image_dir=self.image_dir,
                       coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
                       plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
@@ -346,9 +346,7 @@ class ImageVAE():
         # external system call for plot generation
         print('generating plots with R...')
         os.system('Rscript make_plots.R -d ' + self.save_dir) 
+        
         print('done!')
-
-
-
 
 
