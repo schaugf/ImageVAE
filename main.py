@@ -38,7 +38,6 @@ args = parser.parse_args()
 def main():
 
     os.makedirs(args.save_dir, exist_ok=True)
-    os.makedirs(os.path.join(args.save_dir, 'checkpoints'), exist_ok=True)
 
     if args.image_dir == None:
         args.image_dir = os.path.join(args.data_dir, 'train')

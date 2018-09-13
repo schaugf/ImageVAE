@@ -79,8 +79,6 @@ class ImageVAE():
         
         input_shape = (self.image_size, self.image_size, self.nchannel)
         
-        #   encoder architecture
-        
         # build encoder model
         inputs = Input(shape=input_shape, name='encoder_input')
         
@@ -225,13 +223,13 @@ class ImageVAE():
         callbacks.append(checkpointer)
 
         if self.earlystop:
-            earlystop = EarlyStopping(monitor='loss', min_delta=0, patience=5)
+            earlystop = EarlyStopping(monitor='loss', min_delta=0, patience=8)
             callbacks.append(earlystop)
 
         if self.use_clr:
             clr = CyclicLR(base_lr=self.learn_rate,
-                           max_lr=0.001,
-                           step_size=4*self.steps_per_epoch,
+                           max_lr=0.0001,
+                           step_size=0.5*self.steps_per_epoch,
                            mode='triangular')
             callbacks.append(clr)
         
@@ -326,7 +324,8 @@ class ImageVAE():
 
         # generate coordconv figures
         CoordPlot(image_dir=self.image_dir,
-                  coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
+                  coord_file=os.path.join(self.save_dir, 'embedding_umap.csv')
+                  save_w=8000, save_h=8000,
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
        
  
@@ -340,6 +339,7 @@ class ImageVAE():
 
             CoordPlot(image_dir=self.image_dir,
                       coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
+                      save_w=8000, save_h=8000,
                       plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
  
 
