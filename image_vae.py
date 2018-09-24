@@ -7,6 +7,7 @@ from keras.layers import Input, Conv2D, Flatten, Dense, Reshape, Lambda, Conv2DT
 from keras import optimizers
 from keras import metrics
 from keras.models import Model
+from keras.utils import plot_model
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
 from keras.callbacks import TerminateOnNaN, CSVLogger, ModelCheckpoint, EarlyStopping
@@ -130,10 +131,12 @@ class ImageVAE():
         # instantiate encoder model
         self.encoder = Model(inputs, [z_mean, z_log_var, z], name='encoder')
         self.encoder.summary()
+        plot_model(self.encoder, to_file=os.path.join(self.save_dir, 'encoder_model.png'), show_shapes=True)
         
         # instantiate decoder model
         self.decoder = Model(latent_inputs, outputs, name='decoder')
         self.decoder.summary()
+        plot_model(self.decoder, to_file=os.path.join(self.save_dir, 'decoder_model.png'), show_shapes=True)
   
         # instantiate VAE model
         outputs = self.decoder(self.encoder(inputs)[2])
@@ -155,7 +158,8 @@ class ImageVAE():
                          optimizer=optimizer)
 
         self.vae.summary()       
-        
+        plot_model(self.vae, to_file=os.path.join(self.save_dir, 'vae_model.png'), show_shapes=True)
+
         # save model architectures
         self.model_dir = os.path.join(self.save_dir, 'models')
         os.makedirs(self.model_dir, exist_ok=True)
@@ -324,7 +328,7 @@ class ImageVAE():
 
         # generate coordconv figures
         CoordPlot(image_dir=self.image_dir,
-                  coord_file=os.path.join(self.save_dir, 'embedding_umap.csv')
+                  coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
                   save_w=8000, save_h=8000,
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
        
