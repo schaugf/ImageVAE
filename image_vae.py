@@ -50,6 +50,7 @@ class ImageVAE():
         self.verbose        = args.verbose
         self.phase          = args.phase
         self.steps_per_epoch = args.steps_per_epoch
+        self.channels_first = args.channels_first
         
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
         self.file_names = os.listdir(os.path.join(self.data_dir, 'train'))
@@ -87,11 +88,11 @@ class ImageVAE():
         filters = self.nfilters
         kernel_size = self.kernel_size
         for i in range(2):
-            filters *= 2
+            #filters *= 2
             x = Conv2D(filters=filters,
                        kernel_size=kernel_size,
                        activation='relu',
-                       strides=2,
+                       strides=1,
                        padding='same')(x)
         
         # shape info needed to build decoder model
@@ -99,7 +100,7 @@ class ImageVAE():
         
         # generate latent vector Q(z|X)
         x = Flatten()(x)
-        x = Dense(16, activation='relu')(x)
+        x = Dense(self.inter_dim, activation='relu')(x)
         z_mean = Dense(self.latent_dim, name='z_mean')(x)
         z_log_var = Dense(self.latent_dim, name='z_log_var')(x)
         
@@ -116,9 +117,9 @@ class ImageVAE():
             x = Conv2DTranspose(filters=filters,
                                 kernel_size=kernel_size,
                                 activation='relu',
-                                strides=2,
+                                strides=1,
                                 padding='same')(x)
-            filters //= 2
+            #filters //= 2
         
         
         outputs = Conv2DTranspose(filters=input_shape[2],
@@ -233,7 +234,7 @@ class ImageVAE():
         if self.use_clr:
             clr = CyclicLR(base_lr=self.learn_rate,
                            max_lr=0.0001,
-                           step_size=0.5*self.steps_per_epoch,
+                           step_size=0.25*self.steps_per_epoch,
                            mode='triangular')
             callbacks.append(clr)
         
