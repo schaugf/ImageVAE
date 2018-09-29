@@ -161,9 +161,10 @@ class VAEcallback(Callback):
         self.latent_walk(is_final=True)
 
         print('animating training...')
-        os
-        os.system('convert -delay 0.1 %s/latent_walk/* %s/animated/latent_walk_animated.gif' % 
-                  (self.save_dir, self.save_dir))
+        cmd = 'ffmpeg -i ' + self.save_dir + '/latent_walk/latent_walk_epoch_%03d.png -vcodec libx264 -crf 25 ' + self.save_dir + '/animated/latent_walk_animated.mp4'
+        os.system(cmd)
         
-        os.system('convert -delay 0.1 %s/reconstructed/* %s/animated/reconstructed_animated.gif' % 
-                  (self.save_dir, self.save_dir))
+        cmd = 'ffmpeg -i ' + self.save_dir + '/reconstructed/recon_images_epoch_%03d.png -vcodec libx264 -crf 25 ' + self.save_dir + '/animated/reconstructed_animated.mp4'
+        os.system(cmd)
+
+
