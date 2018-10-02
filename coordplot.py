@@ -34,7 +34,7 @@ def CoordPlot(image_dir, coord_file, nplot=None, save_w=4000, save_h=3000, tile_
     tx = coords[:,0]
     ty = coords[:,1]
 
-    full_image = Image.new('RGBA', (save_w, save_h), (0,0,0,255))  # black background
+    full_image = Image.new('RGB', (save_w, save_h))
     for fn, x, y in zip(filenames, tx, ty):
         img = Image.open(os.path.join(image_dir, fn)) 	# load raw png image
         npi = np.array(img, np.uint8)					# convert to uint np arrat

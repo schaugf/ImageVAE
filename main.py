@@ -32,6 +32,7 @@ parser.add_argument('--num_save',       type=int,   default=8,          help='va
 parser.add_argument('--do_tsne', 		type=int,   default=1,          help='run tsne analysis? 1=yes')
 parser.add_argument('--verbose',        type=int,   default=2,          help='1=verbose, 2=quiet')
 parser.add_argument('--steps_per_epoch',    type=int,   default=0,      help='steps per epoch')
+parser.add_argument('--channels_first', type=int,   default=0,          help='channels stored first? 1=yes, 0=no')
 args = parser.parse_args()
 
 
