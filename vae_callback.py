@@ -52,8 +52,9 @@ class VAEcallback(Callback):
         if self.nchannel > 3:
             input_images = np.array([np.load(fname) for fname in to_load])
             input_images = input_images[:,:,:,0:3]
+            input_images = ((2**8) * input_images / (2**self.image_res)).astype(np.uint8)
         else:
-            input_images = np.array([np.array(Image.open(fname)) for fname in to_load])  # needs to generalize
+            input_images = np.array([np.array(Image.open(fname)) for fname in to_load])  # needs to generalize to 2-channel?
         
         if self.nchannel == 1:
             input_images = input_images[..., None]  # add extra index dimension
