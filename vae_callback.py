@@ -91,7 +91,7 @@ class VAEcallback(Callback):
             scaled_input = scaled_input[..., None]
        
         recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
-        scaled_recon = recon_images * float((2**self.image_res - 1))
+        scaled_recon = recon_images * float((2**8 - 1))
 #        scaled_recon = scaled_recon[..., None]
         
         idx = 0
