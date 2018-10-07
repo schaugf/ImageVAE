@@ -1,12 +1,13 @@
 import os
-import csv
 import random
 import argparse
 import numpy as np
 from PIL import Image
 from skimage.transform import resize
 
-def CoordPlot(image_dir, coord_file, nplot=None, save_w=4000, save_h=3000, tile_size=100, makegrid=1, random_select=0, plotfile='coordplot.png'):
+def CoordPlot(image_dir, coord_file, nplot=None, 
+              save_w=4000, save_h=3000, tile_size=100, 
+              makegrid=True, random_select=0, plotfile='coordplot.png'):
     """
     Plot individual images as tiles according to provided coordinates
     """
@@ -33,15 +34,18 @@ def CoordPlot(image_dir, coord_file, nplot=None, save_w=4000, save_h=3000, tile_
         coords[:,i] = coords[:,i] / coords[:,i].max()
     tx = coords[:,0]
     ty = coords[:,1]
-
+    
+    
     full_image = Image.new('RGB', (save_w, save_h))
     for fn, x, y in zip(filenames, tx, ty):
+        
         img = Image.open(os.path.join(image_dir, fn)) 	# load raw png image
+        
         npi = np.array(img, np.uint8)					# convert to uint np arrat
         rsz = resize(npi, (tile_size, tile_size),						# resize, which converts to float64
                     mode='constant', 
                     anti_aliasing=True)
-        npi = (2**8) * rsz / rsz.max() 					# rescale back up to original 8 bit res, with max
+        npi = (2**8 - 1) * rsz / rsz.max() 					# rescale back up to original 8 bit res, with max
         npi = npi.astype(np.uint8) 						# recast as uint8
         img = Image.fromarray(npi) 						# convert back to image
         full_image.paste(img, (int((save_w - tile_size) * x), int((save_h - tile_size) * y)))
@@ -69,7 +73,9 @@ def CoordPlot(image_dir, coord_file, nplot=None, save_w=4000, save_h=3000, tile_
         grid_image = Image.new('RGB', (save_w, save_h))
         for img, grid_pos in zip(filenames, grid_assignment):
             x, y = grid_pos
+            
             tile = Image.open(os.path.join(image_dir, img))
+            
             tile = tile.resize((tile_size, tile_size), Image.ANTIALIAS)
             grid_image.paste(tile, (int(x), int(y)))
 

@@ -36,7 +36,8 @@ class VAEcallback(Callback):
         self.data_dir       = model.data_dir
         self.save_dir       = model.save_dir
         self.vae            = model.vae
-        self.decoder        = model.decoder 
+        self.decoder        = model.decoder
+        self.show_channels  = model.show_channels
         
     
     def save_input_images(self):
@@ -51,8 +52,8 @@ class VAEcallback(Callback):
         
         if self.nchannel > 3:
             input_images = np.array([np.load(fname) for fname in to_load])
-            input_images = input_images[:,:,:,0:3]
-            input_images = ((2**8) * input_images / (2**self.image_res)).astype(np.uint8)
+            input_images = ((2**8 - 1) * (input_images[...,self.show_channels]/(2**self.image_res - 1))).astype(np.uint8)
+        
         else:
             input_images = np.array([np.array(Image.open(fname)) for fname in to_load])  # needs to generalize to 2-channel?
         
@@ -80,26 +81,31 @@ class VAEcallback(Callback):
         
         to_load = glob.glob(os.path.join(self.data_dir, 'train', '*'))[:(self.num_save * self.num_save)]
         
+        # again, whether input is npy or png
         if self.nchannel > 3:
             input_images = np.array([np.load(fname) for fname in to_load])
-            #input_images = input_images[:,:,:,0:3]
+            
         else:
             input_images = np.array([np.array(Image.open(fname)) for fname in to_load])
-
-        scaled_input = input_images / float((2**self.image_res - 1))
         
+        scaled_input = input_images / (2**self.image_res - 1)
+
         if self.nchannel == 1:
             scaled_input = scaled_input[..., None]
-       
+            
+               
         recon_images = self.vae.predict(scaled_input, batch_size = self.batch_size)
-        scaled_recon = recon_images * float((2**8 - 1))
-#        scaled_recon = scaled_recon[..., None]
+        scaled_recon = recon_images * (2**8 - 1)
+        scaled_recon = scaled_recon[...,self.show_channels]
         
         idx = 0
         for i in range(self.num_save):
             for j in range(self.num_save):
+                #print('reconstruction max:', scaled_recon.max())
+                #print('reconstructed dtype:', scaled_recon.dtype)
+
                 recon_figure[i * self.image_size : (i+1) * self.image_size,
-                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,:,:,0:3]
+                             j * self.image_size : (j+1) * self.image_size, :] = scaled_recon[idx,...]
                 idx += 1
 
         if not(is_final):
@@ -127,12 +133,15 @@ class VAEcallback(Callback):
                 z_sample[i] = xi
         
                 z_sample = np.tile(z_sample, self.batch_size).reshape(self.batch_size, self.latent_dim)
+                
                 x_decoded = self.decoder.predict(z_sample, batch_size=self.batch_size)
-                x_decoded = x_decoded * float((2**self.image_res - 1))
+                x_decoded = x_decoded * float(2**8 - 1)
                 
                 sample = x_decoded[0].reshape(self.image_size, self.image_size, self.nchannel)
+                
+                # need show_channels input as list
                 if self.nchannel > 3:
-                    sample = sample[:,:,0:3]
+                    sample = sample[:,:,self.show_channels]
                 
                 figure[i * self.image_size: (i + 1) * self.image_size,
                        j * self.image_size: (j + 1) * self.image_size, :] = sample

@@ -12,9 +12,8 @@ class NumpyDataGenerator(keras.utils.Sequence):
     """
     
     def __init__(self, data_dir, batch_size, image_size, nchannel,
-                 image_res, 
-                 #channels_to_use, channel_first, 
-                 shuffle):
+                 image_res, shuffle):
+        
         self.image_size = image_size
         self.batch_size = batch_size
         self.list_IDs = glob.glob(os.path.join(data_dir, 'train', '*'))
@@ -22,8 +21,6 @@ class NumpyDataGenerator(keras.utils.Sequence):
         self.image_res = image_res
         self.shuffle = shuffle
         self.on_epoch_end()
-        #self.channels_to_use = channels_to_use
-        #self.channel_first = channel_first
 
 
     def __len__(self):
@@ -50,19 +47,11 @@ class NumpyDataGenerator(keras.utils.Sequence):
 
     def __data_generation(self, list_IDs_temp):
         # Initialization
-        X = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel), dtype=np.float16)
+        X = np.zeros((self.batch_size, self.image_size, self.image_size, self.image_channel))
         # Generate data
         for i, ID in enumerate(list_IDs_temp):
-            # Store sample
-            #if self.channel_first:
-             #   temp = np.transpose(np.load(ID), (1, 2, 0)) / (2 ** self.image_res - 1)
-           # else:
-            temp = np.load(ID) / (2 ** self.image_res - 1)
-            #channels = np.array(self.channels_to_use.split(',')).astype(int)
-            channels = np.array(range(self.image_channel))
-            temp = temp[:, :, channels]
-            X[i,] = temp
-            return X
+            X[i,] = np.load(ID) / (2**self.image_res - 1)
+        return X
 
 
 

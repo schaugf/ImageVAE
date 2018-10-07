@@ -17,7 +17,7 @@ parser.add_argument('--use_vaecb',      type=int,   default=1,          help='us
 parser.add_argument('--use_clr',        type=int,   default=1,          help='use cyclic learning rate? 1=yes, 0=no')
 parser.add_argument('--earlystop',		type=int,	default=1,			help='use early stopping? 1=yes, 0=no')
 parser.add_argument('--image_size',     type=int,   default=64,         help='image size')
-parser.add_argument('--nchannel',      type=int,   default=3,          help='image channels')
+parser.add_argument('--nchannel',       type=int,   default=3,          help='image channels')
 parser.add_argument('--image_res',      type=int,   default=8,          help='image resolution (8 or 16)')
 parser.add_argument('--latent_dim',     type=int,   default=2,          help='latent dimension')
 parser.add_argument('--inter_dim',      type=int,   default=128,        help='intermediate dimension')
@@ -32,7 +32,9 @@ parser.add_argument('--num_save',       type=int,   default=8,          help='va
 parser.add_argument('--do_tsne', 		type=int,   default=1,          help='run tsne analysis? 1=yes')
 parser.add_argument('--verbose',        type=int,   default=2,          help='1=verbose, 2=quiet')
 parser.add_argument('--steps_per_epoch',    type=int,   default=0,      help='steps per epoch')
-parser.add_argument('--channels_first', type=int,   default=0,          help='channels stored first? 1=yes, 0=no')
+
+parser.add_argument('--show_channels',  nargs='*', type=int,  default=[0,1,2], help='channels used when generating pngs')
+
 args = parser.parse_args()
 
 
@@ -50,7 +52,6 @@ def main():
     if args.phase == 'load':
         if args.checkpoint == 'NA':
             sys.exit('No checkpoint file provided')
-            
         model = ImageVAE(args)
         model.vae.load_weights(args.checkpoint)
         model.train()

@@ -30,12 +30,11 @@ class ImageVAE():
         self.data_dir       = args.data_dir
         self.image_dir      = args.image_dir
         self.save_dir       = args.save_dir    
-        self.image_size     = args.image_size
-        self.nchannel       = args.nchannel
-        self.image_res      = args.image_res
+        
         self.use_vaecb      = args.use_vaecb
         self.use_clr        = args.use_clr
         self.earlystop 		= args.earlystop
+        
         self.latent_dim     = args.latent_dim
         self.inter_dim      = args.inter_dim
         self.kernel_size    = args.kernel_size
@@ -43,17 +42,24 @@ class ImageVAE():
         self.epochs         = args.epochs
         self.nfilters       = args.nfilters
         self.learn_rate     = args.learn_rate
+        
         self.epsilon_std    = args.epsilon_std
+        
         self.latent_samp    = args.latent_samp
         self.num_save       = args.num_save
+        
         self.do_tsne        = args.do_tsne
         self.verbose        = args.verbose
         self.phase          = args.phase
         self.steps_per_epoch = args.steps_per_epoch
-        self.channels_first = args.channels_first
         
         self.data_size = len(os.listdir(os.path.join(self.data_dir, 'train')))
         self.file_names = os.listdir(os.path.join(self.data_dir, 'train'))
+        
+        self.image_size     = args.image_size  # infer?
+        self.nchannel       = args.nchannel
+        self.image_res      = args.image_res
+        self.show_channels  = args.show_channels
         
         if self.steps_per_epoch == 0:
             self.steps_per_epoch = self.data_size // self.batch_size
@@ -201,15 +207,13 @@ class ImageVAE():
                 class_mode = 'input')
            
         else:
-          # expecting data saved as numpy array
+            # expecting data saved as numpy array
             train_generator = NumpyDataGenerator(self.data_dir,
                                            batch_size = self.batch_size,
                                            image_size = self.image_size,
                                            nchannel = self.nchannel,
                                            image_res = self.image_res,
-                                           #self.channels_to_use,
-                                           #self.channel_first,
-                                           shuffle=False)
+                                           shuffle=True)
        
         # instantiate callbacks       
         callbacks = []
@@ -244,8 +248,9 @@ class ImageVAE():
         
         self.history = self.vae.fit_generator(train_generator,
                                               epochs = self.epochs,
-                                              callbacks = callbacks)
-                                              # validation_data = train_generator)                               
+                                              callbacks = callbacks,
+                                              steps_per_epoch = self.steps_per_epoch)                               
+
 
         print('saving model weights to', self.model_dir)
         self.vae.save_weights(os.path.join(self.model_dir, 'weights_vae.hdf5'))
@@ -289,8 +294,6 @@ class ImageVAE():
                                            image_size = self.image_size,
                                            nchannel = self.nchannel,
                                            image_res = self.image_res,
-                                           #self.channels_to_use,
-                                           #self.channel_first,
                                            shuffle=False)
        
         encoded = self.encoder.predict_generator(test_generator,
@@ -323,6 +326,7 @@ class ImageVAE():
         print('learning umap...')
         umap_embed = umap.UMAP().fit_transform(encoded[2])
         outFile = open(os.path.join(self.save_dir, 'embedding_umap.csv'), 'w')
+        
         with outFile:
             writer = csv.writer(outFile)
             writer.writerows(umap_embed)
@@ -330,7 +334,7 @@ class ImageVAE():
         # generate coordconv figures
         CoordPlot(image_dir=self.image_dir,
                   coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
-                  save_w=8000, save_h=8000,
+                  save_w=8000, save_h=8000, tile_size=self.image_size,
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
        
  
@@ -338,13 +342,14 @@ class ImageVAE():
             print('learning tsne...')
             tsne_embed = TSNE(n_components=2).fit_transform(encoded[2])
             outFile = open(os.path.join(self.save_dir, 'embedding_tsne.csv'), 'w')
+            
             with outFile:
                 writer = csv.writer(outFile)
                 writer.writerows(tsne_embed)
 
             CoordPlot(image_dir=self.image_dir,
                       coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
-                      save_w=8000, save_h=8000,
+                      save_w=8000, save_h=8000, tile_size=self.image_size,
                       plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
  
 
