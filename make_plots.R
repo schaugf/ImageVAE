@@ -57,6 +57,26 @@ myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
 sc <- scale_colour_gradientn(colours = myPalette(100), limits=c(-3, 3))
 sf <- scale_fill_gradientn(colours = myPalette(100), limits=c(-3, 3))
 
+##################
+
+cormat = cor(encodings)
+
+pdf(file = file.path(opt$save_dir, 
+                     'vae_heatmap.pdf'),
+    height = 6,
+    width = 6)
+
+heatmap.2(cormat,
+          dendrogram='both', 
+          trace='none', 
+          col=myPalette, 
+          key=F,
+          margins=c(6,6),
+          lhei=c(.2, 4),
+          lwid=c(.5, 4))
+
+dev.off()
+
 #	plot loss trends
 
 cat('generating plots...\n')
