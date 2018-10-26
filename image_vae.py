@@ -16,6 +16,7 @@ from clr_callback import CyclicLR
 from vae_callback import VAEcallback
 from numpydatagenerator import NumpyDataGenerator
 from coordplot import CoordPlot
+from walk_principal_manifold import WalkPrincipalManifold
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE' 
 
@@ -153,7 +154,7 @@ class ImageVAE():
         def vae_loss(inputs, outputs):
             xent_loss = metrics.binary_crossentropy(K.flatten(inputs), K.flatten(outputs))
             xent_loss *= self.image_size * self.image_size
-            kl_loss = 1 + z_log_var - K.square(z_mean) - K.exp(z_log_var)
+            kl_loss = 1 + z_log_var * 2 - K.square(z_mean) - K.exp(z_log_var * 2)
             kl_loss = K.sum(kl_loss, axis=-1)
             kl_loss *= -0.5
             vae_loss = K.mean(xent_loss + kl_loss)
@@ -205,6 +206,20 @@ class ImageVAE():
                 batch_size = self.batch_size,
                 color_mode = 'rgb',
                 class_mode = 'input')
+            
+            train_generator = train_datagen.flow_from_directory(
+                '/Users/schau/projects/chc2/cropped',
+                target_size = (60, 60),
+                batch_size = 1,
+                shuffle = False,
+                color_mode = 'rgb',
+                class_mode = 'input')
+            
+            train_generator.filenames[0:30]
+            
+            with open('filenames.csv', 'w') as myfile:
+                wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
+                wr.writerow(train_generator.filenames)
            
         else:
             # expecting data saved as numpy array
@@ -246,6 +261,7 @@ class ImageVAE():
             vaecb = VAEcallback(self)
             callbacks.append(vaecb)
         
+        
         self.history = self.vae.fit_generator(train_generator,
                                               epochs = self.epochs,
                                               callbacks = callbacks,
@@ -261,6 +277,7 @@ class ImageVAE():
 
         print('done!')
    
+    
 
     def encode(self):
         """ encode data with trained model
@@ -273,7 +290,7 @@ class ImageVAE():
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
-                batch_size = 1,
+                batch_size = self.data_size,  #1
                 color_mode = 'grayscale',
                 shuffle = False,
                 class_mode = 'input')
@@ -282,7 +299,7 @@ class ImageVAE():
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
-                batch_size = 1,
+                batch_size = self.data_size,  # `
                 color_mode = 'rgb',
                 shuffle = False,
                 class_mode = 'input')
@@ -290,14 +307,16 @@ class ImageVAE():
         else:
           # expecting data saved as numpy array
             test_generator = NumpyDataGenerator(self.data_dir,
-                                           batch_size = 1,
+                                           batch_size = self.data_size,  #1
                                            image_size = self.image_size,
                                            nchannel = self.nchannel,
                                            image_res = self.image_res,
                                            shuffle=False)
        
-        encoded = self.encoder.predict_generator(test_generator,
-                                                 steps = self.data_size)
+        #encoded = self.encoder.predict_generator(test_generator,
+        #                                         steps = self.data_size)
+        
+        encoded = self.encoder.predict_generator(test_generator)
  
         # save generated filename
         fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
@@ -321,6 +340,13 @@ class ImageVAE():
             writer = csv.writer(outFile)
             writer.writerows(encoded[2])
 
+
+        # generate principal manifold walks
+        WalkPrincipalManifold(self.decoder,
+                              encoded,
+                              self.save_dir)
+        
+        
 
         # dimensionality reduction and save
         print('learning umap...')
