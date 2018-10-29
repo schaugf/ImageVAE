@@ -13,3 +13,20 @@ By specifying the size of the latent feature vector, these networks learn salien
 This model was originally developed to analyze images of multicellular growth response to microenvironment perturbation, as shown in the figure.
 These data are available for download at original resolution at <https://www.synapse.org/mep_lincs>.
 
+## Training a VAE
+
+To train a VAE model, ensure each file of the dataet is contained in data/train. Then, simply call main.py and point the model to the data/ directory.
+Keras will automatically flow data from the data/train directory.
+
+```bash
+
+python main.py \
+    --data_dir data/ \
+    --save_dir save/ \
+    --latent_dim 16 \
+    --batch_size 32 \
+    --epochs 20 \
+    --phase train
+
+```
+
