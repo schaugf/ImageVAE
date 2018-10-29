@@ -26,7 +26,7 @@ def WalkPrincipalManifold(model,
     os.makedirs(output, exist_ok=True)
     
     # infer plotting parameters
-    image_size = loaded_model.output_shape[1]  # assumes square image
+    image_size = model.output_shape[1]  # assumes square image
 
     # compute principal components of encodings
     pca = PCA(n_components=2)
@@ -42,7 +42,7 @@ def WalkPrincipalManifold(model,
     inverse_grid = pca.inverse_transform(grid_samples)
 
     
-    x_decoded = loaded_model.predict(inverse_grid, batch_size = inverse_grid.shape[0])
+    x_decoded = model.predict(inverse_grid, batch_size = inverse_grid.shape[0])
     
     figure = np.zeros((image_size * nsamples, 
                        image_size * nsamples, 3))
