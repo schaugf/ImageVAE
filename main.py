@@ -14,6 +14,7 @@ parser.add_argument('--save_dir',       type=str,   default='save',     help='sa
 parser.add_argument('--phase',          type=str,   default='train',    help='train or load')
 parser.add_argument('--checkpoint',     type=str,   default='NA',       help='checkpoint weight file')
 parser.add_argument('--use_vaecb',      type=int,   default=1,          help='use VAE callback? 1=yes, 0=no')
+parser.add_argument('--do_vaecb_each',  type=int,   default=0,          help='run reconstruction after each epoch? 1=yes, 0=no')
 parser.add_argument('--use_clr',        type=int,   default=1,          help='use cyclic learning rate? 1=yes, 0=no')
 parser.add_argument('--earlystop',		type=int,	default=1,			help='use early stopping? 1=yes, 0=no')
 parser.add_argument('--image_size',     type=int,   default=64,         help='image size')

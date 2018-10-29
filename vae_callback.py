@@ -38,7 +38,7 @@ class VAEcallback(Callback):
         self.vae            = model.vae
         self.decoder        = model.decoder
         self.show_channels  = model.show_channels
-        
+        self.do_vaecb_each  = model.do_vaecb_each  # do each epoch
     
     def save_input_images(self):
         """ save input images
@@ -155,8 +155,9 @@ class VAEcallback(Callback):
         
         
     def on_epoch_end(self, epoch, logs={}):
-        self.save_input_reconstruction(epoch)
-        self.latent_walk(epoch)        
+        if self.do_vaecb_each:
+            self.save_input_reconstruction(epoch)
+            self.latent_walk(epoch)        
 
 
     def on_train_begin(self, logs={}):
@@ -170,11 +171,12 @@ class VAEcallback(Callback):
         self.save_input_reconstruction(is_final=True)
         self.latent_walk(is_final=True)
 
-        print('animating training...')
-        cmd = 'ffmpeg -i ' + self.save_dir + '/latent_walk/latent_walk_epoch_%03d.png -vcodec libx264 -crf 25 ' + self.save_dir + '/animated/latent_walk_animated.mp4'
-        os.system(cmd)
+        if self.do_vaecb_each:
+            print('animating training...')
+            cmd = 'ffmpeg -i ' + self.save_dir + '/latent_walk/latent_walk_epoch_%03d.png -vcodec libx264 -crf 25 ' + self.save_dir + '/animated/latent_walk_animated.mp4'
+            os.system(cmd)
         
-        cmd = 'ffmpeg -i ' + self.save_dir + '/reconstructed/recon_images_epoch_%03d.png -vcodec libx264 -crf 25 ' + self.save_dir + '/animated/reconstructed_animated.mp4'
-        os.system(cmd)
+            cmd = 'ffmpeg -i ' + self.save_dir + '/reconstructed/recon_images_epoch_%03d.png -vcodec libx264 -crf 25 ' + self.save_dir + '/animated/reconstructed_animated.mp4'
+            os.system(cmd)
 
 

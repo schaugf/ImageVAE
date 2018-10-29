@@ -33,6 +33,7 @@ class ImageVAE():
         self.save_dir       = args.save_dir    
         
         self.use_vaecb      = args.use_vaecb
+        self.do_vaecb_each  = args.do_vaecb_each
         self.use_clr        = args.use_clr
         self.earlystop 		= args.earlystop
         
