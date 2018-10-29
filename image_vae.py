@@ -207,20 +207,8 @@ class ImageVAE():
                 color_mode = 'rgb',
                 class_mode = 'input')
             
-            train_generator = train_datagen.flow_from_directory(
-                '/Users/schau/projects/chc2/cropped',
-                target_size = (60, 60),
-                batch_size = 1,
-                shuffle = False,
-                color_mode = 'rgb',
-                class_mode = 'input')
-            
-            train_generator.filenames[0:30]
-            
-            with open('filenames.csv', 'w') as myfile:
-                wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                wr.writerow(train_generator.filenames)
            
+          
         else:
             # expecting data saved as numpy array
             train_generator = NumpyDataGenerator(self.data_dir,
@@ -317,12 +305,14 @@ class ImageVAE():
         #                                         steps = self.data_size)
         
         encoded = self.encoder.predict_generator(test_generator)
- 
-        # save generated filename
+        self.file_names = test_generator.filenames
+           
+         # save generated filename
         fnFile = open(os.path.join(self.save_dir, 'filenames.csv'), 'w')
         with fnFile:
             writer = csv.writer(fnFile)
-            writer.writerow(self.file_names)
+            for file in self.file_names:
+                writer.writerow([file])
         
         # generate and save encodings       
         outFile = open(os.path.join(self.save_dir, 'z_mean.csv'), 'w')
@@ -343,7 +333,7 @@ class ImageVAE():
 
         # generate principal manifold walks
         WalkPrincipalManifold(self.decoder,
-                              encoded,
+                              encoded[2],
                               self.save_dir)
         
         
