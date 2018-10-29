@@ -38,6 +38,7 @@ class ImageVAE():
         self.earlystop 		= args.earlystop
         
         self.latent_dim     = args.latent_dim
+        self.nlayers        = args.nlayers
         self.inter_dim      = args.inter_dim
         self.kernel_size    = args.kernel_size
         self.batch_size     = args.batch_size
@@ -95,7 +96,7 @@ class ImageVAE():
         x = inputs
         filters = self.nfilters
         kernel_size = self.kernel_size
-        for i in range(2):
+        for i in range(self.nlayers):
             #filters *= 2
             x = Conv2D(filters=filters,
                        kernel_size=kernel_size,
@@ -121,7 +122,7 @@ class ImageVAE():
         x = Dense(shape[1] * shape[2] * shape[3], activation='relu')(latent_inputs)
         x = Reshape((shape[1], shape[2], shape[3]))(x)
         
-        for i in range(2):
+        for i in range(self.nlayers):
             x = Conv2DTranspose(filters=filters,
                                 kernel_size=kernel_size,
                                 activation='relu',
