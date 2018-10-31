@@ -280,7 +280,7 @@ class ImageVAE():
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
-                batch_size = self.data_size,  #1
+                batch_size = 1,
                 color_mode = 'grayscale',
                 shuffle = False,
                 class_mode = 'input')
@@ -289,7 +289,7 @@ class ImageVAE():
             test_generator = test_datagen.flow_from_directory(
                 self.data_dir,
                 target_size = (self.image_size, self.image_size),
-                batch_size = self.data_size,  # `
+                batch_size = 1,
                 color_mode = 'rgb',
                 shuffle = False,
                 class_mode = 'input')
@@ -297,7 +297,7 @@ class ImageVAE():
         else:
           # expecting data saved as numpy array
             test_generator = NumpyDataGenerator(self.data_dir,
-                                           batch_size = self.data_size,  #1
+                                           batch_size = 1,
                                            image_size = self.image_size,
                                            nchannel = self.nchannel,
                                            image_res = self.image_res,
@@ -352,7 +352,7 @@ class ImageVAE():
         # generate coordconv figures
         CoordPlot(image_dir=self.image_dir,
                   coord_file=os.path.join(self.save_dir, 'embedding_umap.csv'),
-                  save_w=8000, save_h=8000, tile_size=self.image_size,
+                  save_w=12000, save_h=12000, tile_size=100,
                   plotfile=os.path.join(self.save_dir, 'coordplot_umap.png'))
        
  
@@ -367,7 +367,7 @@ class ImageVAE():
 
             CoordPlot(image_dir=self.image_dir,
                       coord_file=os.path.join(self.save_dir, 'embedding_tsne.csv'),
-                      save_w=8000, save_h=8000, tile_size=self.image_size,
+                      save_w=12000, save_h=12000, tile_size=100,
                       plotfile=os.path.join(self.save_dir, 'coordplot_tsne.png'))
  
 
