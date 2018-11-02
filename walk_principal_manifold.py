@@ -17,32 +17,24 @@ def WalkPrincipalManifold(model,
     Walk principal manifold by inverse PCA coordinate rotation
     '''
 
-    # testing
-    #model_arch    = '/Users/schau/projects/ImageVAE/results/chc/ld16_bs16/models/arch_decoder.json'
-    #model_weights = '/Users/schau/projects/ImageVAE/results/chc/ld16_bs16/models/weights_decoder.hdf5'
-    #encoding_file = '/Users/schau/projects/ImageVAE/results/chc/ld16_bs16/encodings.csv'
-    #nsamples      = 11
     
     os.makedirs(output, exist_ok=True)
     
     # infer plotting parameters
-    image_size = model.output_shape[1]  # assumes square image
+    image_size = loaded_model.output_shape[1]  # assumes square image
 
     # compute principal components of encodings
     pca = PCA(n_components=2)
     pca.fit(encodings)
     
     # generate pair-wise samples of ppd space
-    norm_grid = norm.ppf(np.linspace(0.01, 
-                                     0.99, 
-                                     nsamples))
-    
-    grid_samples = list(itertools.product(norm_grid, norm_grid))
+    norm_grid_x = norm.ppf(np.linspace(0.01, 0.99, nsamples), scale = np.sqrt(pca.explained_variance_[0]))
+    norm_grid_y = norm.ppf(np.linspace(0.01, 0.99, nsamples), scale = np.sqrt(pca.explained_variance_[1]))
+    grid_samples = list(itertools.product(norm_grid_x, norm_grid_y))
     
     inverse_grid = pca.inverse_transform(grid_samples)
-
     
-    x_decoded = model.predict(inverse_grid, batch_size = inverse_grid.shape[0])
+    x_decoded = loaded_model.predict(inverse_grid, batch_size = inverse_grid.shape[0])
     
     figure = np.zeros((image_size * nsamples, 
                        image_size * nsamples, 3))
@@ -67,11 +59,11 @@ if __name__=='__main__':
     import argparse
     
     parser = argparse.ArgumentParser(description='generate principal manifold walk')
-    parser.add_argument('--model_arch', type=str, default=None, help='decoder architecture')
+    parser.add_argument('--model_arch',    type=str, default=None, help='decoder architecture')
     parser.add_argument('--model_weights', type=str, default=None, help='decoder weights')
     parser.add_argument('--encoding_file', type=str, default=None, help='file of principal points')
-    parser.add_argument('--output', type=str, default='output', help='output save image')
-    parser.add_argument('--nsamples', type=int, default=11, help='number of samples')
+    parser.add_argument('--output',        type=str, default='output', help='output save image')
+    parser.add_argument('--nsamples',      type=int, default=11, help='number of samples')
     
     args = parser.parse_args()
     
@@ -86,7 +78,7 @@ if __name__=='__main__':
     loaded_model.load_weights(args.model_weights)
     
     # load encodings
-    encodings  = pd.read_csv(args.encoding_file)
+    encodings  = pd.read_csv(args.encoding_file, header = None)
 
 
     WalkPrincipalManifold(model         = loaded_model,
