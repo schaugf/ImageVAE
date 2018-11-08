@@ -44,8 +44,8 @@ def WalkPrincipalManifold(model,
         for j in range(nsamples):
             sample = x_decoded[counter,...]
             counter += 1
-            figure[(i * image_size) : ((i + 1) * image_size),
-                   (j * image_size): ((j + 1) * image_size), 
+            figure[(j * image_size) : ((j + 1) * image_size),
+                   (i * image_size): ((i + 1) * image_size), 
                    :] = sample * 255
         
     imageio.imwrite(os.path.join(output,
