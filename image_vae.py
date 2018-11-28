@@ -16,7 +16,7 @@ from clr_callback import CyclicLR
 from vae_callback import VAEcallback
 from numpydatagenerator import NumpyDataGenerator
 from coordplot import CoordPlot
-from walk_principal_manifold import WalkPrincipalManifold
+from walk_manifold import WalkPrincipalManifold
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE' 
 
@@ -208,9 +208,6 @@ class ImageVAE():
                 batch_size = self.batch_size,
                 color_mode = 'rgb',
                 class_mode = 'input')
-            
-           
-          
         else:
             # expecting data saved as numpy array
             train_generator = NumpyDataGenerator(self.data_dir,
@@ -219,6 +216,10 @@ class ImageVAE():
                                            nchannel = self.nchannel,
                                            image_res = self.image_res,
                                            shuffle=True)
+
+        # if files saved as single npy block
+
+
        
         # instantiate callbacks       
         callbacks = []

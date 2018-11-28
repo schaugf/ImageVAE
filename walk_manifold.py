@@ -9,16 +9,17 @@ from keras.models import model_from_json
 
 os.environ['HDF5_USE_FILE_LOCKING']='FALSE'
 
-def WalkPrincipalManifold(model,
+
+def WalkPrincipalManifold(loaded_model,
                           encodings,
-                          output,
+                          save_dir,
                           nsamples = 11):
     '''
-    Walk principal manifold by inverse PCA coordinate rotation
+    Walk principal manifold by inverse PCA coordinate rotation with keras model
     '''
 
     
-    os.makedirs(output, exist_ok=True)
+    os.makedirs(save_dir, exist_ok=True)
     
     # infer plotting parameters
     image_size = loaded_model.output_shape[1]  # assumes square image
@@ -39,20 +40,55 @@ def WalkPrincipalManifold(model,
     figure = np.zeros((image_size * nsamples, 
                        image_size * nsamples, 3))
     
-    counter = 0
+    idx = 0
     for i in range(nsamples):
         for j in range(nsamples):
-            sample = x_decoded[counter,...]
-            counter += 1
-            figure[(j * image_size) : ((j + 1) * image_size),
-                   (i * image_size): ((i + 1) * image_size), 
+            sample = x_decoded[idx,...]
+            idx += 1
+            figure[(i * image_size) : ((i + 1) * image_size),
+                   (j * image_size): ((j + 1) * image_size), 
                    :] = sample * 255
         
-    imageio.imwrite(os.path.join(output,
-                                 'principal_manifold_walk.png'),
-                    figure.astype(np.uint8))
+    imageio.imwrite(os.path.join(save_dir, 'walk_principal.png'), figure.astype(np.uint8))
 
 
+
+def WalkGlobalManifold(loaded_model,
+                       save_dir,
+                       nsamples = 11):
+    '''
+    Walk global latent manifold orthogonally
+    '''
+
+    image_size = loaded_model.output_shape[1]  # assumes square image
+    latent_dim = 16  # get from model
+
+    grid_x = norm.ppf(np.linspace(0.01, 0.99, nsamples))
+    sample_grid = np.zeros((latent_dim*nsamples, latent_dim))
+    idx = 0
+    for i in range(latent_dim):
+        for j in range(nsamples):
+            sample_row = np.zeros((latent_dim))
+            sample_row[i] = grid_x[j]
+            sample_grid[idx,:] = sample_row
+            idx += 1
+            
+    
+    x_decoded   = loaded_model.predict(sample_grid, batch_size=sample_grid.shape[0])
+
+    figure = np.zeros((image_size * latent_dim, image_size * nsamples, 3))  # 3-channel image
+    
+    idx = 0
+    for i in range(latent_dim):
+        for j in range(nsamples):
+           sample = x_decoded[idx,...] 
+           idx += 1
+           figure[(i * image_size) : ((i + 1) * image_size),
+                  (j * image_size): ((j + 1) * image_size), :] = sample * 255
+    
+    imageio.imwrite(os.path.join(save_dir, 'walk_global.png'), figure.astype(np.uint8))
+
+    
 
 if __name__=='__main__':
     
@@ -62,7 +98,7 @@ if __name__=='__main__':
     parser.add_argument('--model_arch',    type=str, default=None, help='decoder architecture')
     parser.add_argument('--model_weights', type=str, default=None, help='decoder weights')
     parser.add_argument('--encoding_file', type=str, default=None, help='file of principal points')
-    parser.add_argument('--output',        type=str, default='output', help='output save image')
+    parser.add_argument('--save_dir',        type=str, default='results', help='output save image')
     parser.add_argument('--nsamples',      type=int, default=11, help='number of samples')
     
     args = parser.parse_args()
@@ -81,9 +117,14 @@ if __name__=='__main__':
     encodings  = pd.read_csv(args.encoding_file, header = None)
 
 
-    WalkPrincipalManifold(model         = loaded_model,
+    WalkGlobalManifold(loaded_model = loaded_model,
+                       save_dir     = args.save_dir,
+                       nsamples     = args.nsamples)
+
+
+    WalkPrincipalManifold(loaded_model  = loaded_model,
                           encodings     = encodings,
-                          output        = args.output,
+                          save_dir      = args.save_dir,
                           nsamples      = args.nsamples)
 
 
