@@ -56,7 +56,7 @@ class VAEcallback(Callback):
         
         else:
             input_images = np.array([np.array(Image.open(fname)) for fname in to_load])  # needs to generalize to 2-channel?
-            input_image = input_images[...,[0,1,2]]  # for RGBA images
+            input_images = input_images[...,[0,1,2]]  # for RGBA images
         
         if self.nchannel == 1:
             input_images = input_images[..., None]  # add extra index dimension
